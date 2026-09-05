@@ -28,8 +28,8 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
 
   if (!isOpen) return null;
 
-  const userEmail = currentUser?.email || 'dolfius1er@gmail.com';
-  const isConnected = Boolean(currentUser);
+  const userEmail = currentUser?.email || '';
+  const isConnected = Boolean(currentUser && currentUser.email);
 
   const handleSyncToOneDrive = async () => {
     setIsSyncing(true);
@@ -115,7 +115,7 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
                 {lang === 'fr' ? 'OneDrive & Synchronisation Cloud' : 'OneDrive & Cloud Sync'}
               </h2>
               <p className="text-xs text-slate-400 font-mono">
-                {isConnected ? `Compte relié : ${userEmail}` : `Mode Connecté (${userEmail})`}
+                {isConnected ? `Compte relié : ${userEmail}` : (lang === 'fr' ? 'Aucun compte lié' : 'No account linked')}
               </p>
             </div>
           </div>
@@ -169,10 +169,16 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
                 <span className="text-xs font-semibold text-slate-300">
                   {lang === 'fr' ? 'État de la liaison OneDrive' : 'OneDrive Link Status'}
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{lang === 'fr' ? 'Actif & Sécurisé' : 'Active & Secure'}</span>
-                </span>
+                {isConnected ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{lang === 'fr' ? 'Actif & Sécurisé' : 'Active & Secure'}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-500/20 text-slate-400 text-xs font-bold">
+                    <span>{lang === 'fr' ? 'Non connecté' : 'Not connected'}</span>
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -181,7 +187,7 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
                     {lang === 'fr' ? 'E-mail Associé' : 'Linked Email'}
                   </span>
                   <span className="text-xs font-bold text-white font-mono truncate block mt-0.5">
-                    {userEmail}
+                    {isConnected ? userEmail : (lang === 'fr' ? 'Aucun' : 'None')}
                   </span>
                 </div>
 
@@ -210,7 +216,7 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
               </p>
               <button
                 onClick={handleSyncToOneDrive}
-                disabled={isSyncing}
+                disabled={isSyncing || !isConnected}
                 className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 shrink-0"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
