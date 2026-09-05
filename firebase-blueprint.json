@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "User": {
+      "path": "users/{userId}",
+      "fields": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "Document": {
+      "path": "users/{userId}/documents/{docId}",
+      "fields": {
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "content": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "Flashcard": {
+      "path": "users/{userId}/flashcards/{cardId}",
+      "fields": {
+        "question": { "type": "string" },
+        "answer": { "type": "string" }
+      }
+    },
+    "Transfer": {
+      "path": "users/{userId}/transfers/{transferId}",
+      "fields": {
+        "docId": { "type": "string" },
+        "docTitle": { "type": "string" },
+        "source": { "type": "string" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "Pairing": {
+      "path": "pairings/{code}",
+      "fields": {
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "expiresAt": { "type": "string" }
+      }
+    }
+  }
+}

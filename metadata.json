@@ -1,0 +1,11 @@
+{
+  "name": "Degree Unlocker",
+  "description": "Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 100+ famous quotes & speeches, and handwriting blocknote companion.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Degree Unlocker - Academic Notes & Document Intelligence</title>
+    <meta name="description" content="Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 100+ famous quotes & speeches, and handwriting blocknote companion." />
+    <meta property="og:title" content="Degree Unlocker - Academic Notes & Document Intelligence" />
+    <meta property="og:description" content="Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 100+ famous quotes & speeches, and handwriting blocknote companion." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Crect width='32' height='32' rx='8' fill='%233730a3'/%3E%3Cpath d='M16 7L6 12L16 17L26 12L16 7Z' fill='%23fbbf24'/%3E%3Cpath d='M10 14.5V20.5C10 22.5 12.6863 24 16 24C19.3137 24 22 22.5 22 20.5V14.5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M25 13V19' stroke='%23fbbf24' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='25' cy='20' r='1.5' fill='%23fbbf24'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+    <div id="root"></div>
+    <script>
+      // Suppress harmless Vite HMR WebSocket connection errors
+      const origConsoleError = console.error;
+      console.error = function(...args) {
+        if (args && args[0] && typeof args[0] === 'string' && args[0].includes('websocket')) {
+          return;
+        }
+        origConsoleError.apply(console, args);
+      };
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
