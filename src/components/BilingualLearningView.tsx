@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { SchoolDocument, AppLanguage, BilingualLearningExercise, BilingualLanguageCode } from '../types';
+import { fetchWithRetry, fetchJsonWithRetry } from '../lib/api-utils';
 import { 
   Languages, 
   Sparkles, 
@@ -129,26 +130,29 @@ export const BilingualLearningView: React.FC<BilingualLearningViewProps> = ({
         payload.subject = lang === 'fr' ? 'Littérature & Langues' : 'Literature & Languages';
       }
 
-      const res = await fetch('/api/bilingual/generate', {
+      const data = await fetchJsonWithRetry<{ exercise?: BilingualLearningExercise; error?: string }>('/api/bilingual/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
+      }, { retries: 3, initialDelayMs: 600 });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || (lang === 'fr' ? 'Échec de la génération de l’atelier' : 'Failed to generate exercise'));
-      }
-
-      const data = await res.json();
-      if (data.exercise) {
+      if (data && data.exercise) {
         setExercise(data.exercise);
       } else {
-        throw new Error(lang === 'fr' ? 'Exercice bilingue introuvable.' : 'Bilingual exercise not found.');
+        throw new Error(data?.error || (lang === 'fr' ? 'Exercice bilingue introuvable.' : 'Bilingual exercise not found.'));
       }
     } catch (err: any) {
       console.error('Bilingual error:', err);
-      setError(err.message || (lang === 'fr' ? 'Erreur lors de la préparation de l’exercice' : 'Error generating exercise'));
+      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
+      if (isUnavailable) {
+        setError(
+          lang === 'fr'
+            ? 'Le modèle Gemini est actuellement en forte demande. Une nouvelle tentative a été effectuée automatiquement. Veuillez réessayer dans quelques instants.'
+            : 'Gemini model is experiencing high demand. Automatic retries completed. Please try again in a moment.'
+        );
+      } else {
+        setError(err.message || (lang === 'fr' ? 'Erreur lors de la préparation de l’exercice' : 'Error generating exercise'));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -293,15 +297,17 @@ export const BilingualLearningView: React.FC<BilingualLearningViewProps> = ({
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
         const base64Audio = reader.result as string;
-        const res = await fetch('/api/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64Audio, mimeType: 'audio/webm' }),
-        });
-
-        if (!res.ok) throw new Error('Transcription failed');
-        const data = await res.json();
-        setVoiceEvaluationResult(data.text || '');
+        try {
+          const data = await fetchJsonWithRetry<{ text?: string }>('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64Audio, mimeType: 'audio/webm' }),
+          }, { retries: 2 });
+          setVoiceEvaluationResult(data?.text || '');
+        } catch (transcribeErr) {
+          console.error('Transcription error:', transcribeErr);
+          setVoiceEvaluationResult(lang === 'fr' ? 'Erreur lors de la vérification vocale.' : 'Voice transcription error.');
+        }
       };
     } catch (err: any) {
       console.error('Voice practice error:', err);

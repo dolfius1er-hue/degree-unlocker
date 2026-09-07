@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { STUDY_PLAYLISTS, STUDY_TIPS, StudyPlaylist, StudyTip } from '../data/studyPlaylists';
 import { AppLanguage } from '../types';
+import { isTauri } from '../lib/tauri-bridge';
 import { 
   Headphones, 
   Music, 
@@ -174,7 +175,7 @@ export const StudyPlaylistsModal: React.FC<StudyPlaylistsModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || isTauri()) return null;
 
   const filteredPlaylists = selectedGenre === 'all' 
     ? STUDY_PLAYLISTS 

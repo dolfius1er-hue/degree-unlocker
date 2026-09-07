@@ -64,7 +64,16 @@ html.theme-paper {
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, .font-heading {
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.015em;
 }
 
 @keyframes fadeIn {
@@ -150,6 +159,29 @@ body {
     background: rgba(15, 23, 42, 0.75);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Windows 11 Modern Desktop Fluent Styling */
+  .win11-window {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .dark .win11-window {
+    border-color: rgba(30, 41, 59, 0.85);
+    box-shadow: 0 25px 50px -15px rgba(0, 0, 0, 0.55), 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .win11-modal {
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.22), 0 0 25px rgba(99, 102, 241, 0.08);
+    backdrop-filter: blur(20px);
+  }
+  .dark .win11-modal {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 35px 75px -15px rgba(0, 0, 0, 0.75), 0 0 35px rgba(99, 102, 241, 0.14);
   }
 
   .glow-blue {

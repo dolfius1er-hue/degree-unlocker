@@ -2,25 +2,90 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Degree Unlocker - Academic Notes & Document Intelligence</title>
-    <meta name="description" content="Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 100+ famous quotes & speeches, and handwriting blocknote companion." />
-    <meta property="og:title" content="Degree Unlocker - Academic Notes & Document Intelligence" />
-    <meta property="og:description" content="Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 100+ famous quotes & speeches, and handwriting blocknote companion." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>DegreeUnlocker - Academic Notes & Document Intelligence</title>
+    <meta name="description" content="DegreeUnlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 300+ famous quotes & speeches, and handwriting blocknote companion." />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DegreeUnlocker" />
+    <meta name="google-site-verification" content="google89c7f392d321d40f" />
+    <meta property="og:title" content="DegreeUnlocker - Academic Notes & Document Intelligence" />
+    <meta property="og:description" content="DegreeUnlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 300+ famous quotes & speeches, and handwriting blocknote companion." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Crect width='32' height='32' rx='8' fill='%233730a3'/%3E%3Cpath d='M16 7L6 12L16 17L26 12L16 7Z' fill='%23fbbf24'/%3E%3Cpath d='M10 14.5V20.5C10 22.5 12.6863 24 16 24C19.3137 24 22 22.5 22 20.5V14.5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M25 13V19' stroke='%23fbbf24' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='25' cy='20' r='1.5' fill='%23fbbf24'/%3E%3C/svg%3E" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-512.png" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Outfit:wght@400;500;600;700;800&family=Patrick+Hand&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      @keyframes splashProgressNatural {
+        0% { width: 0%; }
+        15% { width: 28%; }
+        35% { width: 58%; }
+        65% { width: 84%; }
+        88% { width: 93%; }
+        100% { width: 97%; }
+      }
+      .splash-bar {
+        animation: splashProgressNatural 2.8s cubic-bezier(0.08, 0.82, 0.17, 1) forwards;
+        transition: width 0.12s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease-out;
+      }
+    </style>
   </head>
-  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+  <body class="bg-slate-900 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white font-sans">
+    <!-- Fast launch splash loader shown while JS bundle initializes -->
+    <div id="app-splash-loader" style="position:fixed;inset:0;background-color:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ffffff;font-family:system-ui,-apple-system,sans-serif;z-index:9999;pointer-events:none;">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#1e1b4b);border-radius:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -5px rgba(79,70,229,0.5);margin-bottom:16px;border:1px solid rgba(129,140,248,0.3);">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <path d="M16 6L5 12.5L16 19L27 12.5L16 6Z" fill="#fbbf24"/>
+          <path d="M9 15.5V21.5C9 23.5 12 25 16 25C20 25 23 23.5 23 21.5V15.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+          <path d="M26 13V19.5" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="26" cy="21" r="1.5" fill="#fbbf24"/>
+        </svg>
+      </div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;color:#f8fafc;">DegreeUnlocker</div>
+      <div style="font-size:12px;color:#a5b4fc;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;margin-bottom:16px;">Lancement rapide...</div>
+      
+      <!-- Synchronized 100% Responsive Progress Bar -->
+      <div style="width:180px;height:4px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden;">
+        <div class="splash-bar" style="height:100%;background:linear-gradient(90deg,#6366f1,#818cf8,#f59e0b);border-radius:99px;"></div>
+      </div>
+    </div>
+
     <div id="root"></div>
+
     <script>
-      // Suppress harmless Vite HMR WebSocket connection errors
+      // Fast dismiss helper for app launch loader - fills progress bar to 100% on React mount before fading out
+      window.dismissSplashLoader = function() {
+        const loader = document.getElementById('app-splash-loader');
+        if (loader) {
+          const bar = loader.querySelector('.splash-bar');
+          if (bar) {
+            bar.style.animation = 'none';
+            bar.style.width = '100%';
+          }
+          setTimeout(function() {
+            loader.style.opacity = '0';
+            loader.style.transition = 'opacity 0.15s ease-out';
+            setTimeout(function() {
+              if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+            }, 150);
+          }, 90);
+        }
+      };
+
+      // Suppress harmless Vite HMR WebSocket & dev noise
       const origConsoleError = console.error;
       console.error = function(...args) {
-        if (args && args[0] && typeof args[0] === 'string' && args[0].includes('websocket')) {
+        if (args && args[0] && typeof args[0] === 'string' && (args[0].includes('websocket') || args[0].includes('WebSocket') || args[0].includes('HMR'))) {
           return;
         }
         origConsoleError.apply(console, args);
@@ -29,4 +94,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

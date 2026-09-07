@@ -143,6 +143,12 @@ export const BackupProgressModal: React.FC<BackupProgressModalProps> = ({
   // Build the complete standardized backup object
   const createBackupPayload = (): StudyProgressBackup => {
     const timestamp = new Date().toISOString();
+    // Strip heavy base64 pdfDataUrl payloads to prevent memory overflow and browser freezing / white screen on large backups
+    const lightweightDocuments = documents.map(doc => ({
+      ...doc,
+      pdfDataUrl: doc.pdfDataUrl && doc.pdfDataUrl.length > 50000 ? '[TRUNCATED_PDF_BINARY_FOR_LIGHTWEIGHT_BACKUP]' : doc.pdfDataUrl
+    }));
+
     return {
       version: '1.0.0',
       exportedAt: timestamp,
@@ -163,7 +169,7 @@ export const BackupProgressModal: React.FC<BackupProgressModalProps> = ({
       quizResults: quizHistory,
       vocabularyList: vocabulary,
       flashcards: flashcards,
-      documents: documents,
+      documents: lightweightDocuments,
       preferences: preferences,
     };
   };

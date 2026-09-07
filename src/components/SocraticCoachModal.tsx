@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppLanguage, SocraticMessage, SchoolDocument } from '../types';
+import { fetchJsonWithRetry } from '../lib/api-utils';
 import { 
   Bot, 
   Send, 
@@ -87,7 +88,7 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/coach/ask', {
+      const data = await fetchJsonWithRetry<{ text: string; hints?: string[]; suggestedQuestions?: string[] }>('/api/coach/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,13 +98,8 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
           currentDocTitle: currentDocument?.title || 'Session de travail',
           language: lang,
         }),
-      });
+      }, { retries: 3, initialDelayMs: 600 });
 
-      if (!res.ok) {
-        throw new Error(lang === 'fr' ? 'Erreur lors de la réponse du tuteur' : 'Error contacting tutor');
-      }
-
-      const data = await res.json();
       const coachMsg: SocraticMessage = {
         id: `coach-${Date.now()}`,
         sender: 'coach',
@@ -115,12 +111,17 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
 
       setMessages((prev) => [...prev, coachMsg]);
     } catch (err: any) {
+      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
       const errorMsg: SocraticMessage = {
         id: `err-${Date.now()}`,
         sender: 'coach',
-        text: lang === 'fr'
-          ? "Désolé, une petite interruption est survenue. Veuillez reformuler votre question méthodologique !"
-          : "Sorry, a temporary interruption occurred. Please rephrase your study question!",
+        text: isUnavailable
+          ? (lang === 'fr'
+              ? "Le modèle IA est actuellement très sollicité. Une nouvelle tentative automatique a été faite. Merci de réessayer dans quelques instants !"
+              : "The AI model is experiencing high demand. Automatic retries completed. Please try again in a moment!")
+          : (lang === 'fr'
+              ? "Désolé, une petite interruption est survenue. Veuillez reformuler votre question méthodologique !"
+              : "Sorry, a temporary interruption occurred. Please rephrase your study question!"),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);

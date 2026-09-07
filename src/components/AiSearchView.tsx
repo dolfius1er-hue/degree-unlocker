@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SchoolDocument, SearchResponse, SourceValidationResult, AppLanguage, FullTextSearchResult } from '../types';
+import { fetchJsonWithRetry } from '../lib/api-utils';
 import { getSubjectBadgeClass } from '../utils/colors';
 import { searchDocumentParagraphs } from '../utils/searchIndexer';
 import { 
@@ -84,10 +85,38 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
   const [wordQuery, setWordQuery] = useState('');
   const [paragraphQuery, setParagraphQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('all');
+  const [docTypeFilter, setDocTypeFilter] = useState<string>('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
   const [lastExecutedQuery, setLastExecutedQuery] = useState('');
+
+  // Helper for applying document type and date range filters
+  const matchesFilters = (doc: SchoolDocument) => {
+    if (subjectFilter !== 'all' && doc.subject !== subjectFilter) return false;
+
+    if (docTypeFilter !== 'all') {
+      const fn = (doc.fileName || '').toLowerCase();
+      const title = (doc.title || '').toLowerCase();
+      if (docTypeFilter === 'pdf' && !fn.endsWith('.pdf') && !title.includes('pdf')) return false;
+      if (docTypeFilter === 'docx' && !fn.endsWith('.docx') && !fn.endsWith('.doc') && !title.includes('word')) return false;
+      if (docTypeFilter === 'notes' && !fn.endsWith('.txt') && !title.includes('note') && !title.includes('fiche')) return false;
+    }
+
+    if (dateRangeFilter !== 'all') {
+      try {
+        const docDate = new Date(doc.date || Date.now());
+        const now = new Date();
+        const diffDays = (now.getTime() - docDate.getTime()) / (1000 * 3600 * 24);
+        if (dateRangeFilter === 'week' && diffDays > 7) return false;
+        if (dateRangeFilter === 'month' && diffDays > 30) return false;
+        if (dateRangeFilter === 'year' && diffDays > 365) return false;
+      } catch (e) {}
+    }
+
+    return true;
+  };
 
   // Search History State (last 10 queries stored in localStorage)
   const SEARCH_HISTORY_STORAGE_KEY = 'degree_unlocker_ai_search_history';
@@ -161,25 +190,28 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
     setLastExecutedQuery(q);
 
     try {
-      const res = await fetch('/api/search', {
+      const result = await fetchJsonWithRetry<SearchResponse>('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: q,
           subjectFilter: subjectFilter,
         }),
-      });
+      }, { retries: 3, initialDelayMs: 600 });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to search school notes');
-      }
-
-      const result: SearchResponse = await res.json();
       setSearchResult(result);
     } catch (err: any) {
       console.error('Search error:', err);
-      setError(err.message || 'Error executing search');
+      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
+      if (isUnavailable) {
+        setError(
+          lang === 'fr'
+            ? 'Le modèle Gemini est actuellement en forte demande. Une nouvelle tentative a été effectuée automatiquement. Veuillez réessayer dans quelques instants.'
+            : 'Gemini model is experiencing high demand. Automatic retries completed. Please try again in a moment.'
+        );
+      } else {
+        setError(err.message || 'Error executing search');
+      }
     } finally {
       setLoading(false);
     }
@@ -194,7 +226,7 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
   const handleValidateDocSource = async (doc: SchoolDocument) => {
     setValidatingDocId(doc.id);
     try {
-      const res = await fetch('/api/validate-source', {
+      const result = await fetchJsonWithRetry<SourceValidationResult>('/api/validate-source', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -203,10 +235,9 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
           content: doc.content,
           subject: doc.subject,
         }),
-      });
+      }, { retries: 2 });
 
-      if (res.ok) {
-        const result: SourceValidationResult = await res.json();
+      if (result) {
         setAuditedDocs(prev => ({ ...prev, [doc.id]: result }));
       }
     } catch (err) {
@@ -223,7 +254,7 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
 
     const results: WordMatchLocation[] = [];
 
-    const filtered = documents.filter(d => subjectFilter === 'all' || d.subject === subjectFilter);
+    const filtered = documents.filter(matchesFilters);
 
     for (const doc of filtered) {
       const lines = doc.content.split('\n');
@@ -533,31 +564,84 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
                 )}
               </div>
 
-              {/* Subject filter & Quick pills */}
-              <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-500 flex items-center gap-1">
-                    <Filter className="w-3.5 h-3.5" />
-                    {lang === 'fr' ? 'Matière :' : 'Subject:'}
-                  </span>
-                  <select
-                    value={subjectFilter}
-                    onChange={(e) => setSubjectFilter(e.target.value)}
-                    className="bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
-                  >
-                    <option value="all">{lang === 'fr' ? 'Toutes les matières' : 'All Subjects'} ({documents.length})</option>
-                    {subjects.map((sub) => (
-                      <option key={sub} value={sub}>
-                        {sub} ({documents.filter(d => d.subject === sub).length})
-                      </option>
-                    ))}
-                  </select>
+              {/* Subject filter, Document Type & Date Range filters */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1 border-t border-slate-100 pt-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Subject Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-500 flex items-center gap-1">
+                      <Filter className="w-3.5 h-3.5" />
+                      {lang === 'fr' ? 'Matière :' : 'Subject:'}
+                    </span>
+                    <select
+                      value={subjectFilter}
+                      onChange={(e) => setSubjectFilter(e.target.value)}
+                      className="bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
+                    >
+                      <option value="all">{lang === 'fr' ? 'Toutes' : 'All'} ({documents.length})</option>
+                      {subjects.map((sub) => (
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Document Type Visual Filter Pills */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-500">{lang === 'fr' ? 'Type :' : 'Type:'}</span>
+                    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px]">
+                      {[
+                        { id: 'all', label: lang === 'fr' ? 'Tous' : 'All' },
+                        { id: 'pdf', label: 'PDF' },
+                        { id: 'docx', label: 'Word' },
+                        { id: 'notes', label: lang === 'fr' ? 'Notes' : 'Notes' },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setDocTypeFilter(t.id)}
+                          className={`px-2 py-0.5 rounded-md font-medium transition-all ${
+                            docTypeFilter === t.id
+                              ? 'bg-white text-indigo-700 shadow-2xs font-bold'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Date Range Visual Filter Pills */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-500">{lang === 'fr' ? 'Période :' : 'Date:'}</span>
+                    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px]">
+                      {[
+                        { id: 'all', label: lang === 'fr' ? 'Toujours' : 'All Time' },
+                        { id: 'week', label: lang === 'fr' ? '7 jours' : '7 Days' },
+                        { id: 'month', label: lang === 'fr' ? '30 jours' : '30 Days' },
+                        { id: 'year', label: lang === 'fr' ? '1 an' : '1 Year' },
+                      ].map((d) => (
+                        <button
+                          key={d.id}
+                          onClick={() => setDateRangeFilter(d.id)}
+                          className={`px-2 py-0.5 rounded-md font-medium transition-all ${
+                            dateRangeFilter === d.id
+                              ? 'bg-white text-indigo-700 shadow-2xs font-bold'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-slate-500">
-                  <span className="text-[11px] font-medium">{lang === 'fr' ? 'Mots suggérés :' : 'Suggested keywords:'}</span>
-                  <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-sm scrollbar-thin">
-                    {SAMPLE_KEYWORDS.slice(0, 5).map((kw, idx) => (
+                  <span className="text-[11px] font-medium hidden sm:inline">{lang === 'fr' ? 'Mots suggérés :' : 'Suggested:'}</span>
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-xs scrollbar-thin">
+                    {SAMPLE_KEYWORDS.slice(0, 4).map((kw, idx) => (
                       <button
                         key={idx}
                         onClick={() => setWordQuery(kw)}

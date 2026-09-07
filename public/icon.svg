@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Full-bleed background for maskable icons -->
+  <rect width="512" height="512" fill="url(#bgGrad)" />
+
+  <!-- Inner glowing ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="rgba(129, 140, 248, 0.15)" stroke-width="8" />
+
+  <!-- Centered Academic Emblem inside 80% Safe Zone (15% padding = bounds 76px to 436px) -->
+  <g filter="url(#shadow)">
+    <!-- Base Book Pages -->
+    <path d="M 128 320 Q 256 348 384 320 L 384 350 Q 256 378 128 350 Z" fill="rgba(255, 255, 255, 0.2)" />
+    <path d="M 128 290 Q 256 318 384 290 L 384 320 Q 256 348 128 320 Z" fill="rgba(255, 255, 255, 0.85)" />
+
+    <!-- Open Book Base -->
+    <path d="M 128 290 Q 256 318 384 290 L 384 298 Q 256 326 128 298 Z" fill="url(#accentGrad)" />
+
+    <!-- Mortarboard Top Cap -->
+    <polygon points="256,128 410,192 256,256 102,192" fill="url(#goldGrad)" stroke="#fef08a" stroke-width="3" />
+
+    <!-- Cap Skull Base / Cap Band -->
+    <path d="M 160 217 V 262 C 160 286 202 302 256 302 C 310 302 352 286 352 262 V 217 L 256 256 Z" fill="url(#accentGrad)" />
+
+    <!-- Gold Tassel -->
+    <path d="M 390 200 L 412 280" stroke="#fef08a" stroke-width="6" stroke-linecap="round" />
+    <circle cx="412" cy="288" r="8" fill="#fef08a" />
+
+    <!-- Keyhole / Unlock Motif in Center -->
+    <circle cx="256" cy="202" r="14" fill="#0f172a" />
+    <polygon points="250,202 262,202 266,230 246,230" fill="#0f172a" />
+  </g>
+</svg>

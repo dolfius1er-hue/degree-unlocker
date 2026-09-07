@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SchoolDocument, AppLanguage, QuizQuestion, QuizScoreRecord } from '../types';
+import { fetchWithRetry, fetchJsonWithRetry } from '../lib/api-utils';
 import { 
   HelpCircle, 
   Sparkles, 
@@ -81,9 +82,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const res = await fetch('/api/quiz/history');
-      if (res.ok) {
-        const data = await res.json();
+      const data = await fetchJsonWithRetry<{ history: QuizScoreRecord[] }>('/api/quiz/history');
+      if (data && data.history) {
         setHistory(data.history || []);
       }
     } catch (err) {
@@ -146,27 +146,30 @@ export const QuizView: React.FC<QuizViewProps> = ({
         throw new Error(lang === 'fr' ? 'Veuillez sélectionner un cours ou saisir un texte.' : 'Please select a document or enter text.');
       }
 
-      const res = await fetch('/api/quiz/generate', {
+      const data = await fetchJsonWithRetry<{ questions: QuizQuestion[]; error?: string }>('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
+      }, { retries: 3, initialDelayMs: 600 });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to generate quiz');
-      }
-
-      const data = await res.json();
-      if (data.questions && data.questions.length > 0) {
+      if (data && data.questions && data.questions.length > 0) {
         setQuestions(data.questions);
         setIsTimerActive(true);
       } else {
-        throw new Error(lang === 'fr' ? 'Aucune question générée.' : 'No questions generated.');
+        throw new Error(data?.error || (lang === 'fr' ? 'Aucune question générée.' : 'No questions generated.'));
       }
     } catch (err: any) {
       console.error('Quiz generation error:', err);
-      setError(err.message || 'Erreur lors de la génération du quiz');
+      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
+      if (isUnavailable) {
+        setError(
+          lang === 'fr'
+            ? 'Le modèle Gemini est actuellement en forte demande. Une nouvelle tentative a été effectuée automatiquement. Veuillez réessayer dans quelques instants.'
+            : 'Gemini model is experiencing high demand. Automatic retries completed. Please try again in a moment.'
+        );
+      } else {
+        setError(err.message || 'Erreur lors de la génération du quiz');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -225,15 +228,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
         userAnswers,
       };
 
-      const res = await fetch('/api/quiz/history', {
+      await fetchJsonWithRetry('/api/quiz/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(record),
       });
 
-      if (res.ok) {
-        loadHistory();
-      }
+      loadHistory();
     } catch (err) {
       console.error('Failed to save quiz score:', err);
     }
@@ -271,18 +272,15 @@ export const QuizView: React.FC<QuizViewProps> = ({
           const base64Audio = reader.result as string;
           setTranscribingAudio(true);
           try {
-            const res = await fetch('/api/transcribe', {
+            const data = await fetchJsonWithRetry<{ text?: string }>('/api/transcribe', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ base64Audio, mimeType: 'audio/webm' }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.text) {
-                setTranscribedNote(data.text);
-                if (useCustomText) {
-                  setCustomText(prev => (prev ? `${prev}\n${data.text}` : data.text));
-                }
+            }, { retries: 2 });
+            if (data && data.text) {
+              setTranscribedNote(data.text);
+              if (useCustomText) {
+                setCustomText(prev => (prev ? `${prev}\n${data.text}` : data.text));
               }
             }
           } catch (err) {

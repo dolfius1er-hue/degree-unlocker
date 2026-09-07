@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { EDUCATIONAL_VIDEOS } from '../data/educationalVideos';
 import { EducationalVideo, AppLanguage } from '../types';
+import { isTauri } from '../lib/tauri-bridge';
 import { 
   Tv, 
   X, 
@@ -33,7 +34,7 @@ export const EducationalVideosModal: React.FC<EducationalVideosModalProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeVideo, setActiveVideo] = useState<EducationalVideo | null>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || isTauri()) return null;
 
   const subjects = [
     { key: 'all', labelFr: 'Toutes les matières', labelEn: 'All Subjects' },

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import { SchoolDocument, SummaryOptions, AppLanguage } from '../types';
+import { fetchJsonWithRetry } from '../lib/api-utils';
 import { getSubjectBadgeClass } from '../utils/colors';
 import { exportSlidesDeckPdf } from '../utils/slidePdfExport';
 import { 
@@ -54,7 +55,7 @@ export const ResumerView: React.FC<ResumerViewProps> = ({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/summarize', {
+      const data = await fetchJsonWithRetry<{ summary: string; keyPoints?: string[]; examTips?: string[] }>('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,20 +66,26 @@ export const ResumerView: React.FC<ResumerViewProps> = ({
           targetLength,
           language: lang === 'fr' ? 'fr' : 'en',
         }),
-      });
+      }, { retries: 3, initialDelayMs: 600 });
 
-      if (!res.ok) {
-        throw new Error(lang === 'fr' ? 'Échec de la génération du résumé' : 'Failed to generate summary');
-      }
-
-      const data = await res.json();
-      onUpdateDocumentSummary(activeDoc.id, data.summary, data.keyPoints || []);
-      if (data.examTips) {
-        setExamTips(data.examTips);
+      if (data && data.summary) {
+        onUpdateDocumentSummary(activeDoc.id, data.summary, data.keyPoints || []);
+        if (data.examTips) {
+          setExamTips(data.examTips);
+        }
       }
     } catch (err: any) {
       console.error('Summary error:', err);
-      alert(err.message || (lang === 'fr' ? 'Erreur lors de la génération du résumé' : 'Error generating summary'));
+      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
+      if (isUnavailable) {
+        alert(
+          lang === 'fr'
+            ? 'Le modèle Gemini est actuellement très sollicité. Les tentatives automatiques ont échoué. Veuillez réessayer dans quelques instants.'
+            : 'Gemini is experiencing high demand. Retries exhausted. Please try again in a moment.'
+        );
+      } else {
+        alert(err.message || (lang === 'fr' ? 'Erreur lors de la génération du résumé' : 'Error generating summary'));
+      }
     } finally {
       setLoading(false);
     }

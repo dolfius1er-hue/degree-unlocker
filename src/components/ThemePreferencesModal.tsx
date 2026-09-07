@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Save,
   RotateCcw,
-  HardDrive
+  HardDrive,
+  Key
 } from 'lucide-react';
 
 interface ThemePreferencesModalProps {
@@ -275,33 +276,41 @@ export const ThemePreferencesModal: React.FC<ThemePreferencesModalProps> = ({
             </div>
           </div>
 
-          {/* 4. BACKUP & PROGRESS SECURITY */}
-          {onOpenBackup && (
-            <div className="p-4 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 flex items-center justify-center shrink-0">
-                  <HardDrive className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h5 className="font-bold text-xs text-white">
-                    {lang === 'fr' ? 'Sauvegarde de la Progression (.JSON)' : 'Study Progress Backup (.JSON)'}
-                  </h5>
-                  <p className="text-[11px] text-slate-400">
-                    {lang === 'fr' ? 'Exportez séries, quiz et lexique.' : 'Export streaks, quizzes, and vocabulary.'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenBackup();
-                }}
-                className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shrink-0"
-              >
-                {lang === 'fr' ? 'Ouvrir' : 'Open'}
-              </button>
+          {/* 4. GEMINI API KEY (Bring Your Own Key - BYOK) */}
+          <div className="space-y-2.5 p-3.5 rounded-2xl border border-indigo-200 bg-indigo-50/40">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{lang === 'fr' ? '4. Clé API Gemini Personnelle (BYOK)' : '4. Custom Gemini API Key (BYOK)'}</span>
+              </label>
+              <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                {lang === 'fr' ? 'Optionnel' : 'Optional'}
+              </span>
             </div>
-          )}
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              {lang === 'fr'
+                ? 'Utilisez votre propre clé Gemini pour profiter de quotas illimités et de modèles puissants (Gemini 2.5 Pro) sans dépendre des crédits partagés.'
+                : 'Provide your own Gemini API key for higher quotas and high-capacity models (Gemini 2.5 Pro) with your own credits.'}
+            </p>
+            <div className="relative">
+              <input
+                type="password"
+                value={preferences.customGeminiKey || ''}
+                onChange={(e) => onUpdatePreferences({ customGeminiKey: e.target.value })}
+                placeholder="AIzaSy..."
+                className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-16"
+              />
+              {preferences.customGeminiKey && (
+                <button
+                  type="button"
+                  onClick={() => onUpdatePreferences({ customGeminiKey: '' })}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-red-500 font-semibold px-1.5 py-0.5"
+                >
+                  {lang === 'fr' ? 'Effacer' : 'Clear'}
+                </button>
+              )}
+            </div>
+          </div>
 
         </div>
 

@@ -16,8 +16,10 @@ import {
   Globe,
   FileType,
   Save,
-  PenTool
+  PenTool,
+  Laptop
 } from 'lucide-react';
+import { isTauri, openNativeFileDialog, readNativeBinary } from '../lib/tauri-bridge';
 
 interface PdfUploadModalProps {
   isOpen: boolean;
@@ -95,6 +97,39 @@ export const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
       setError(lang === 'fr' ? 'Erreur de lecture du fichier local' : 'Failed to read local file');
     };
     reader.readAsDataURL(selectedFile);
+  };
+
+  const handleNativeFilePick = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const selected = await openNativeFileDialog({
+        title: lang === 'fr' ? 'Sélectionner un document de cours' : 'Select a course document'
+      });
+      if (!selected) return;
+      const filePath = Array.isArray(selected) ? selected[0] : selected;
+      const cleanPath = filePath.replace(/\\/g, '/');
+      const fileName = cleanPath.split('/').pop() || 'document';
+      const binary = await readNativeBinary(filePath);
+      if (binary) {
+        const ext = fileName.split('.').pop()?.toLowerCase() || '';
+        let mimeType = 'application/octet-stream';
+        if (ext === 'pdf') mimeType = 'application/pdf';
+        else if (ext === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        else if (ext === 'doc') mimeType = 'application/msword';
+        else if (ext === 'xlsx') mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        else if (ext === 'xls') mimeType = 'application/vnd.ms-excel';
+        else if (ext === 'csv') mimeType = 'text/csv';
+        else if (ext === 'txt') mimeType = 'text/plain';
+        else if (ext === 'md') mimeType = 'text/markdown';
+
+        const blob = new Blob([binary], { type: mimeType });
+        const nativeFile = new File([blob], fileName, { type: mimeType });
+        handleFileChange(nativeFile);
+      }
+    } catch (err: any) {
+      console.warn('[PdfUploadModal] Native pick error:', err);
+      fileInputRef.current?.click();
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -447,7 +482,13 @@ export const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (isTauri()) {
+                    handleNativeFilePick();
+                  } else {
+                    fileInputRef.current?.click();
+                  }
+                }}
                 className={`border-2 border-dashed rounded-xl p-7 text-center cursor-pointer transition-all ${
                   isDragging
                     ? 'border-indigo-500 bg-indigo-50/50'
@@ -523,6 +564,18 @@ export const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Tauri Native Desktop Explorer Option */}
+              {isTauri() && (
+                <button
+                  type="button"
+                  onClick={handleNativeFilePick}
+                  className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Laptop className="w-4 h-4" />
+                  <span>{lang === 'fr' ? 'Ouvrir l’Explorateur de Fichiers Natif (Tauri PC)' : 'Open Native File Dialog (Tauri PC)'}</span>
+                </button>
+              )}
             </div>
           )}
 

@@ -78,12 +78,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   activeTheme = 'light',
 }) => {
   const [selectedFilterPill, setSelectedFilterPill] = useState<string>('all');
+  const [flashcards, setFlashcards] = useState<any[]>([]);
   const [streakData, setStreakData] = useState<{ activityDates: string[]; currentStreak: number }>({
     activityDates: [],
-    currentStreak: 4,
+    currentStreak: 0,
   });
 
-  // Fetch real study streaks from server
+  // Fetch real study streaks and flashcards from server
   useEffect(() => {
     fetch('/api/streaks')
       .then((res) => res.json())
@@ -91,14 +92,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         if (data.success) {
           setStreakData({
             activityDates: data.activityDates || [],
-            currentStreak: data.currentStreak || (data.activityDates?.length > 0 ? data.activityDates.length : 3),
+            currentStreak: data.currentStreak || 0,
           });
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/flashcards')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.flashcards && Array.isArray(data.flashcards)) {
+          setFlashcards(data.flashcards);
         }
       })
       .catch(() => {});
   }, []);
 
-  // Live stats calculation hook using documents state
+  // Live stats calculation hook using documents state and real flashcards
   const liveStats = React.useMemo(() => {
     const subjectMap: Record<string, { count: number; docs: SchoolDocument[]; totalWords: number }> = {};
     documents.forEach((d) => {
@@ -113,24 +123,35 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     const subjectsList = Object.keys(subjectMap).map((subj) => {
       const data = subjectMap[subj];
-      const mastery = Math.min(98, Math.max(45, 60 + data.count * 8 + Math.round(data.totalWords / 250)));
+      const subjCards = flashcards.filter(c => (c.subject || '').toLowerCase() === subj.toLowerCase());
+      const masteredCards = subjCards.filter(c => c.box === 4).length;
+      const mastery = subjCards.length > 0 
+        ? Math.round((masteredCards / subjCards.length) * 100)
+        : Math.min(95, Math.max(30, 50 + data.count * 10));
+
       return {
         subject: subj,
         count: data.count,
         docs: data.docs,
+        cardCount: subjCards.length,
         mastery,
         frequencyScore: data.count * 20 + data.totalWords,
       };
     }).sort((a, b) => b.frequencyScore - a.frequencyScore);
+
+    const totalMasteredCards = flashcards.filter(c => c.box === 4).length;
+    const srsRetention = flashcards.length > 0 
+      ? Math.round((totalMasteredCards / flashcards.length) * 100) 
+      : documents.length > 0 ? 75 : 0;
 
     return {
       subjectMap,
       subjectsList,
       totalDocs: documents.length,
       totalSubjects: subjectsList.length,
-      srsRetention: documents.length > 0 ? Math.min(98, 78 + documents.length * 2) : 0,
+      srsRetention,
     };
-  }, [documents, lang]);
+  }, [documents, flashcards, lang]);
 
   // Real subjects breakdown from actual documents
   const subjectsMap: Record<string, number> = {};
@@ -300,7 +321,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             {lang === 'fr' ? 'Toutes' : 'All'}
           </button>
 
-          {['Biologie', 'Physique-Chimie', 'Histoire & Géo', 'Mathématiques', ...distinctSubjects.filter(s => !['Biologie', 'Physique-Chimie', 'Histoire & Géo', 'Mathématiques'].includes(s))].map((subj) => (
+          {distinctSubjects.map((subj) => (
             <button
               key={subj}
               onClick={() => setSelectedFilterPill(subj)}
@@ -315,178 +336,105 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           ))}
         </div>
 
-        {/* Course Cards Grid (Matching mockup card layout) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Card 1: Biologie cellulaire */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col justify-between gap-4 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-500 flex items-center justify-center shrink-0">
-                  <Globe2 className="w-5 h-5" />
-                </div>
-                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug">
-                  Biologie cellulaire: Structure et Fonction
-                </h4>
-              </div>
-
-              {/* Mastery progress */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <span>85% Maîtrisé</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full" style={{ width: '85%' }} />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex items-center gap-2 pt-1 flex-wrap text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-indigo-500" />
-                  <span>54 Flashcards</span>
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                  PDF + Notes
-                </span>
-              </div>
+        {/* Dynamic Course Cards Grid based on genuine user documents / subjects */}
+        {filteredDocuments.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-dashed border-slate-300 dark:border-slate-800 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
+              <BookOpen className="w-7 h-7" />
             </div>
-
-            <button
-              onClick={() => onNavigateTab('flashcards')}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
-            >
-              {lang === 'fr' ? 'Réviser' : 'Review'}
-            </button>
-          </div>
-
-          {/* Card 2: Physique Quantique */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col justify-between gap-4 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-400/30 text-cyan-400 flex items-center justify-center shrink-0">
-                  <Atom className="w-5 h-5" />
-                </div>
-                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug">
-                  Physique Quantique: Les Bases
-                </h4>
-              </div>
-
-              {/* Mastery progress */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <span>80% Maîtrisé</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full" style={{ width: '80%' }} />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex items-center gap-2 pt-1 flex-wrap text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-cyan-400" />
-                  <span>32 Flashcards</span>
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                  Quiz Recall
-                </span>
-              </div>
+            <div className="space-y-1.5 max-w-md mx-auto">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                {lang === 'fr' ? 'Aucun cours dans cette section' : 'No courses in this section'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {lang === 'fr'
+                  ? 'Importez vos documents (PDF, Word, Doc) ou rédigez vos premières fiches pour commencer vos révisions.'
+                  : 'Import your study materials or craft notes to populate your personal course deck.'}
+              </p>
             </div>
-
-            <button
-              onClick={() => onNavigateTab('quiz')}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
-            >
-              {lang === 'fr' ? 'Réviser' : 'Review'}
-            </button>
-          </div>
-
-          {/* Card 3: Histoire Contemporaine */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col justify-between gap-4 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-400 flex items-center justify-center shrink-0">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug">
-                  Histoire Contemporaine: XXème siècle
-                </h4>
-              </div>
-
-              {/* Mastery progress */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <span>40% Maîtrisé</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full" style={{ width: '40%' }} />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex items-center gap-2 pt-1 flex-wrap text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-amber-400" />
-                  <span>70 Flashcards</span>
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                  Synthèse
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={onOpenUpload}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>{lang === 'fr' ? 'Importer un cours' : 'Import course'}</span>
+              </button>
+              <button
+                onClick={onOpenNewNote}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{lang === 'fr' ? 'Créer une note' : 'Create note'}</span>
+              </button>
             </div>
-
-            <button
-              onClick={() => onNavigateTab('flashcards')}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
-            >
-              {lang === 'fr' ? 'Réviser' : 'Review'}
-            </button>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {filteredDocuments.slice(0, 8).map((doc) => {
+              const meta = SUBJECT_METADATA[doc.subject || ''] || SUBJECT_METADATA['General'];
+              const SubjectIcon = meta.icon;
+              const docCards = flashcards.filter(c => c.docId === doc.id || (c.subject && doc.subject && c.subject.toLowerCase() === doc.subject.toLowerCase()));
+              const masteredCount = docCards.filter(c => c.box === 4).length;
+              const mastery = docCards.length > 0 ? Math.round((masteredCount / docCards.length) * 100) : 60;
 
-          {/* Card 4: Mathématiques Avancées */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col justify-between gap-4 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-400/30 text-indigo-400 flex items-center justify-center shrink-0">
-                  <FileCode className="w-5 h-5" />
+              return (
+                <div 
+                  key={doc.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col justify-between gap-4 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all group"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                        <SubjectIcon className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                          {doc.subject || (lang === 'fr' ? 'Général' : 'General')}
+                        </span>
+                        <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug line-clamp-2" title={doc.title}>
+                          {doc.title}
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Mastery progress */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        <span>{mastery}% {lang === 'fr' ? 'Maîtrisé' : 'Mastered'}</span>
+                        <span className="text-[10px] text-slate-400">{docCards.length} {lang === 'fr' ? 'fiches' : 'cards'}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full transition-all duration-500" style={{ width: `${mastery}%` }} />
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="flex items-center gap-2 pt-1 flex-wrap text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-indigo-500" />
+                        <span>{doc.type.toUpperCase()}</span>
+                      </span>
+                      {doc.wordCount && (
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px]">
+                          ~{doc.wordCount} {lang === 'fr' ? 'mots' : 'words'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onSelectDoc(doc)}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>{lang === 'fr' ? 'Consulter & Réviser' : 'Review Note'}</span>
+                  </button>
                 </div>
-                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug">
-                  Mathématiques Avancées: Algèbre
-                </h4>
-              </div>
-
-              {/* Mastery progress */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <span>92% Maîtrisé</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full" style={{ width: '92%' }} />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex items-center gap-2 pt-1 flex-wrap text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-indigo-400" />
-                  <span>45 Flashcards</span>
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                  Problèmes
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => onNavigateTab('blocknote')}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
-            >
-              {lang === 'fr' ? 'Réviser' : 'Review'}
-            </button>
+              );
+            })}
           </div>
-
-        </div>
+        )}
 
       </div>
 
@@ -513,26 +461,33 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           {/* Progress Distribution Bars */}
           <div className="space-y-3 pt-2">
-            {(distinctSubjects.length > 0 ? distinctSubjects : ['Biologie', 'Physique-Chimie', 'Histoire & Géo', 'Mathématiques']).map((subj, idx) => {
-              const count = subjectsMap[subj] || (idx === 0 ? 5 : idx === 1 ? 4 : idx === 2 ? 3 : 2);
-              const percent = Math.min(100, Math.round((count / (totalDocsCount || 14)) * 100));
-              const colors = ['bg-emerald-500', 'bg-cyan-500', 'bg-amber-500', 'bg-indigo-500', 'bg-purple-500', 'bg-rose-500'];
-              const color = colors[idx % colors.length];
+            {distinctSubjects.length === 0 ? (
+              <div className="py-6 text-center text-xs text-slate-400 space-y-1">
+                <p>{lang === 'fr' ? 'Aucun document enregistré' : 'No documents recorded yet'}</p>
+                <p className="text-[11px] text-slate-500">{lang === 'fr' ? 'Les matières apparaîtront dès que vous ajouterez des fichiers.' : 'Subjects will appear once you add files.'}</p>
+              </div>
+            ) : (
+              distinctSubjects.map((subj, idx) => {
+                const count = subjectsMap[subj] || 0;
+                const percent = totalDocsCount > 0 ? Math.min(100, Math.round((count / totalDocsCount) * 100)) : 0;
+                const colors = ['bg-emerald-500', 'bg-cyan-500', 'bg-amber-500', 'bg-indigo-500', 'bg-purple-500', 'bg-rose-500'];
+                const color = colors[idx % colors.length];
 
-              return (
-                <div key={subj} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{subj}</span>
-                    <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
-                      {count} {lang === 'fr' ? 'doc(s)' : 'doc(s)'} ({percent}%)
-                    </span>
+                return (
+                  <div key={subj} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{subj}</span>
+                      <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
+                        {count} {lang === 'fr' ? 'doc(s)' : 'doc(s)'} ({percent}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className={`${color} h-full rounded-full transition-all duration-500`} style={{ width: `${percent}%` }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div className={`${color} h-full rounded-full transition-all duration-500`} style={{ width: `${percent}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 

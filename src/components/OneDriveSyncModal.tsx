@@ -8,6 +8,7 @@ interface OneDriveSyncModalProps {
   currentUser: any;
   documents: SchoolDocument[];
   onSyncComplete: (syncedDocs: SchoolDocument[]) => void;
+  onOpenAuthModal?: () => void;
   lang?: AppLanguage;
 }
 
@@ -17,6 +18,7 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
   currentUser,
   documents,
   onSyncComplete,
+  onOpenAuthModal,
   lang = 'fr',
 }) => {
   const [activeTab, setActiveTab] = useState<'status' | 'search' | 'transfer'>('status');
@@ -208,20 +210,38 @@ export const OneDriveSyncModal: React.FC<OneDriveSyncModalProps> = ({
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
               <p className="text-[11px] text-slate-400">
                 {lang === 'fr'
-                  ? 'Tout ce qui est créé sur votre téléphone ou PC est automatiquement sauvegardé dans votre espace OneDrive.'
-                  : 'Everything created on your phone or PC is automatically backed up to your OneDrive storage.'}
+                  ? (isConnected 
+                      ? `Vos cours sont synchronisés avec votre compte sécurisé (${userEmail}).`
+                      : 'Aucun compte OneDrive/Cloud relié. Connectez votre adresse personnelle pour activer la synchronisation.')
+                  : (isConnected
+                      ? `Your courses are synced to your secure cloud account (${userEmail}).`
+                      : 'No OneDrive/Cloud account linked. Connect your personal email to enable cloud sync.')}
               </p>
-              <button
-                onClick={handleSyncToOneDrive}
-                disabled={isSyncing || !isConnected}
-                className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 shrink-0"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{lang === 'fr' ? 'Synchroniser maintenant' : 'Sync Now'}</span>
-              </button>
+              
+              {isConnected ? (
+                <button
+                  onClick={handleSyncToOneDrive}
+                  disabled={isSyncing}
+                  className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>{lang === 'fr' ? 'Synchroniser maintenant' : 'Sync Now'}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    onClose();
+                    if (onOpenAuthModal) onOpenAuthModal();
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer shrink-0"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>{lang === 'fr' ? 'Connecter mon propre compte' : 'Connect my account'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}

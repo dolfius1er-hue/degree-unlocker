@@ -26,19 +26,41 @@ import { SchoolDocument, Flashcard, UIPreferences } from '../types';
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId) 
-  : getFirestore(app);
+const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId || 'ai-studio-degreeunlocker-aea10e58-ccdf-4e46-808c-8bb2be0078dd';
+export const db = getFirestore(app, firestoreDbId);
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
+// Add Google Workspace scopes (strictly scoped to drive.file and readonly to streamline verification & trust)
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/documents.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/tasks');
+googleProvider.addScope('https://www.googleapis.com/auth/tasks.readonly');
+
+// In-memory token cache (never stored in localStorage/sessionStorage)
+let cachedAccessToken: string | null = null;
+
+export function getCachedAccessToken(): string | null {
+  return cachedAccessToken;
+}
+
+export function setCachedAccessToken(token: string | null): void {
+  cachedAccessToken = token;
+}
+
 /**
- * Sign in with Google (Cross-device sync Phone <-> Computer)
+ * Sign in with Google (Cross-device sync Phone <-> Computer + Google Workspace OAuth)
  */
-export async function loginWithGoogle(): Promise<User> {
+export async function loginWithGoogle(): Promise<{ user: User; accessToken: string | null }> {
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
+
     // Record user profile in Firestore
     if (result.user) {
       const userRef = doc(db, 'users', result.user.uid);
@@ -50,12 +72,12 @@ export async function loginWithGoogle(): Promise<User> {
         lastLoginAt: serverTimestamp(),
       }, { merge: true });
     }
-    return result.user;
+    return { user: result.user, accessToken: cachedAccessToken };
   } catch (err: any) {
     console.warn('Google popup sign-in note, trying anonymous or fallback:', err);
     // If popup was blocked or iframe restriction occurred, offer anonymous session
     const anonResult = await signInAnonymously(auth);
-    return anonResult.user;
+    return { user: anonResult.user, accessToken: null };
   }
 }
 
@@ -71,6 +93,7 @@ export async function loginAnonymously(): Promise<User> {
  * Sign out
  */
 export async function logoutUser(): Promise<void> {
+  cachedAccessToken = null;
   await fbSignOut(auth);
 }
 

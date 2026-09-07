@@ -1,0 +1,7 @@
+{
+  "version": "3.2.1",
+  "forceUpdate": false,
+  "buildTime": "2026-09-06T15:16:00.000Z",
+  "appName": "DegreeUnlocker",
+  "changelog": "Optimisations réseau par en-tête HTTP HEAD, détection forceUpdate et prise en charge des icônes d'application PC."
+}

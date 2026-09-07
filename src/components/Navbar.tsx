@@ -167,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Quote className="w-3.5 h-3.5 text-amber-600" />
-              <span>{lang === 'fr' ? '100+ Citations' : '100+ Quotes'}</span>
+              <span>{lang === 'fr' ? '300+ Citations' : '300+ Quotes'}</span>
             </button>
 
             <button
@@ -317,7 +317,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               activeTab === 'quotes' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-600 bg-slate-100'
             }`}
           >
-            {lang === 'fr' ? '100+ Citations' : '100+ Quotes'}
+            {lang === 'fr' ? '300+ Citations' : '300+ Quotes'}
           </button>
           <button
             onClick={() => setActiveTab('search')}

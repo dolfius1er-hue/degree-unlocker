@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppLanguage, AppTheme, MenuPosition, UIPreferences } from '../types';
+import { isTauri } from '../lib/tauri-bridge';
 import { 
   GraduationCap, 
   Folder, 
@@ -34,12 +35,19 @@ import {
   PanelLeftOpen,
   Keyboard,
   Cloud,
-  X 
+  Camera,
+  Smartphone,
+  Download,
+  Monitor,
+  X,
+  Crown,
+  Landmark
 } from 'lucide-react';
 
 export type NavTabType = 
   | 'dashboard' 
   | 'library' 
+  | 'school_books'
   | 'search' 
   | 'resumer' 
   | 'blocknote' 
@@ -62,8 +70,12 @@ interface SidebarProps {
   onOpenPreferences: () => void;
   onOpenBackup?: () => void;
   onOpenCoach?: () => void;
+  onOpenPhotoScanner?: () => void;
+  onOpenAuthModal?: () => void;
   onOpenKeyboardShortcuts?: () => void;
   onOpenOneDrive?: () => void;
+  onOpenGoogleWorkspace?: () => void;
+  onOpenPrivacy?: () => void;
   onFilterSubject?: (subject: string) => void;
   totalDocs: number;
   lang: AppLanguage;
@@ -75,9 +87,194 @@ interface SidebarProps {
   activeTheme?: AppTheme;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
+  onInstallPwa?: () => void;
+  isPwaInstalled?: boolean;
+  onSelectQuotesCategory?: (category: string, subcategory?: 'all' | 'dolfius_4_maximes' | 'image_maximes') => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  badge?: number | string;
+  isActive?: boolean;
+  onClick: () => void;
+  collapsed?: boolean;
+  activeColorClass?: string;
+  title?: string;
+}
+
+const NavItem: React.FC<NavItemProps> = React.memo(({
+  icon,
+  label,
+  badge,
+  isActive = false,
+  onClick,
+  collapsed = false,
+  activeColorClass = 'bg-blue-600 text-white font-bold shadow-sm',
+  title,
+}) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+        isActive
+          ? activeColorClass
+          : 'text-slate-300 hover:bg-white/10 hover:text-white'
+      }`}
+      title={title || label}
+    >
+      <div className="flex items-center gap-2.5 truncate">
+        {icon}
+        {!collapsed && <span className="truncate">{label}</span>}
+      </div>
+      {!collapsed && badge !== undefined && (
+        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/30 text-slate-300 font-mono">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+});
+
+interface SectionDividerProps {
+  title?: string;
+  collapsed?: boolean;
+  icon?: React.ReactNode;
+}
+
+export const SectionDivider: React.FC<SectionDividerProps> = React.memo(({ title, collapsed, icon }) => {
+  if (collapsed) {
+    return <div className="my-2 h-[1px] bg-white/10 mx-2" />;
+  }
+
+  if (!title) {
+    return <div className="my-2 h-[1px] bg-white/10 mx-1" />;
+  }
+
+  return (
+    <div className="pt-2.5 pb-1 px-2 flex items-center justify-between gap-2 border-b border-white/10 mb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400/90 select-none">
+      <div className="flex items-center gap-1.5 min-w-0">
+        {icon && <span className="opacity-80 shrink-0">{icon}</span>}
+        <span className="truncate">{title}</span>
+      </div>
+      <div className="flex-1 h-[1px] bg-white/10 ml-1 rounded-full" />
+    </div>
+  );
+});
+
+interface VirtualizedSubjectListProps {
+  subjects: string[];
+  subjectCounts: Record<string, number>;
+  onSelectSubject: (subj: string) => void;
+  collapsed: boolean;
+  itemHeight?: number;
+}
+
+export const VirtualizedSubjectList: React.FC<VirtualizedSubjectListProps> = React.memo(({
+  subjects,
+  subjectCounts,
+  onSelectSubject,
+  collapsed,
+  itemHeight = 36,
+}) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(220);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      setScrollTop(el.scrollTop);
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    setContainerHeight(el.clientHeight || 220);
+
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  if (subjects.length === 0) return null;
+
+  // Direct render if 8 or fewer items for zero layout shift
+  if (subjects.length <= 8) {
+    return (
+      <div className="space-y-0.5">
+        {subjects.map((subj) => (
+          <button
+            key={subj}
+            onClick={() => onSelectSubject(subj)}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-all group cursor-pointer"
+            title={subj}
+          >
+            <div className="flex items-center gap-2 truncate">
+              <Folder className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300 transition-colors shrink-0" />
+              {!collapsed && <span className="truncate">{subj}</span>}
+            </div>
+            {!collapsed && (
+              <span className="text-[10px] font-mono text-slate-400 bg-black/20 px-1.5 py-0.5 rounded-md">
+                {subjectCounts[subj]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // Virtual window calculation for large dataset
+  const totalHeight = subjects.length * itemHeight;
+  const buffer = 2;
+  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - buffer);
+  const endIndex = Math.min(subjects.length - 1, Math.ceil((scrollTop + containerHeight) / itemHeight) + buffer);
+
+  const visibleItems = [];
+  for (let i = startIndex; i <= endIndex; i++) {
+    visibleItems.push({ index: i, subj: subjects[i] });
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="max-h-[220px] overflow-y-auto scrollbar-thin relative rounded-xl bg-black/20 border border-white/5 p-1"
+      style={{ height: Math.min(subjects.length * itemHeight + 8, 220) }}
+    >
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        {visibleItems.map(({ index, subj }) => (
+          <div
+            key={subj}
+            style={{
+              position: 'absolute',
+              top: index * itemHeight,
+              left: 0,
+              right: 0,
+              height: itemHeight,
+            }}
+          >
+            <button
+              onClick={() => onSelectSubject(subj)}
+              className="w-full h-full flex items-center justify-between px-2 py-1 rounded-lg text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-all group cursor-pointer"
+              title={subj}
+            >
+              <div className="flex items-center gap-2 truncate min-w-0">
+                <Folder className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300 transition-colors shrink-0" />
+                {!collapsed && <span className="truncate">{subj}</span>}
+              </div>
+              {!collapsed && (
+                <span className="text-[10px] font-mono text-slate-400 bg-black/30 px-1.5 py-0.5 rounded">
+                  {subjectCounts[subj]}
+                </span>
+              )}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+export const Sidebar: React.FC<SidebarProps> = React.memo(({
   activeTab,
   setActiveTab,
   onNewNote,
@@ -90,8 +287,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenPreferences,
   onOpenBackup,
   onOpenCoach,
+  onOpenPhotoScanner,
+  onOpenAuthModal,
   onOpenKeyboardShortcuts,
   onOpenOneDrive,
+  onOpenGoogleWorkspace,
+  onOpenPrivacy,
   onFilterSubject,
   totalDocs,
   lang,
@@ -103,25 +304,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTheme = 'light',
   isMobileOpen = false,
   onCloseMobile,
+  onInstallPwa,
+  isPwaInstalled = false,
+  onSelectQuotesCategory,
 }) => {
-  const handleTabClick = (tab: NavTabType) => {
+  const handleTabClick = useCallback((tab: NavTabType) => {
     setActiveTab(tab);
     onCloseMobile?.();
-  };
+  }, [setActiveTab, onCloseMobile]);
 
-  const handleSelectSubject = (subj: string) => {
+  const handleSelectSubject = useCallback((subj: string) => {
     if (onFilterSubject) {
       onFilterSubject(subj);
     }
     setActiveTab('library');
     onCloseMobile?.();
-  };
+  }, [onFilterSubject, setActiveTab, onCloseMobile]);
 
-  const wrapAction = (action?: () => void) => () => {
+  const wrapAction = useCallback((action?: () => void) => () => {
     action?.();
     onCloseMobile?.();
-  };
+  }, [onCloseMobile]);
 
+  const [isQuotesSubnavOpen, setIsQuotesSubnavOpen] = useState(false);
   const dynamicSubjects = Object.keys(subjectCounts);
 
   // Background styling according to active theme
@@ -223,11 +428,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="truncate">{lang === 'fr' ? 'Nouvelle Note' : 'New Note'}</span>
               </button>
 
+              {/* Google Workspace Hub (Drive, Docs, Tasks) */}
+              {onOpenGoogleWorkspace && (
+                <button
+                  onClick={wrapAction(onOpenGoogleWorkspace)}
+                  className="w-full px-2 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-sm border border-blue-400/40 cursor-pointer"
+                  title="Google Drive, Docs & Tasks"
+                >
+                  <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
+                  <span className="truncate">Google Workspace</span>
+                </button>
+              )}
+
               {/* OneDrive Cloud Sync */}
               {onOpenOneDrive && (
                 <button
                   onClick={wrapAction(onOpenOneDrive)}
-                  className="w-full px-2 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-sm border border-blue-400/30 cursor-pointer"
+                  className="w-full px-2 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-sm border border-slate-600 cursor-pointer"
                   title="OneDrive & Synchronisation Cloud"
                 >
                   <Cloud className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
@@ -251,10 +468,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <Plus className="w-4 h-4" />
               </button>
+              {onOpenGoogleWorkspace && (
+                <button
+                  onClick={wrapAction(onOpenGoogleWorkspace)}
+                  className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center shadow-sm transition-all border border-blue-400/40 cursor-pointer"
+                  title="Google Workspace (Drive, Docs, Tasks)"
+                >
+                  <Folder className="w-4 h-4 text-amber-300" />
+                </button>
+              )}
               {onOpenOneDrive && (
                 <button
                   onClick={wrapAction(onOpenOneDrive)}
-                  className="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-sm transition-all border border-blue-400/30 cursor-pointer"
+                  className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center shadow-sm transition-all border border-slate-600 cursor-pointer"
                   title="OneDrive Cloud"
                 >
                   <Cloud className="w-4 h-4" />
@@ -265,125 +491,106 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Main Navigation Scroll Area */}
-      <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-4 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-3 scrollbar-thin">
         
         {/* SECTION 1: QUICK ACCESS */}
         <div>
-          {!collapsed && (
-            <div className="px-2.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              {lang === 'fr' ? 'Accès Rapide' : 'Quick Access'}
-            </div>
-          )}
+          <SectionDivider
+            title={lang === 'fr' ? 'Accès Rapide' : 'Quick Access'}
+            collapsed={collapsed}
+            icon={<Compass className="w-3.5 h-3.5 text-blue-400" />}
+          />
           <nav className="space-y-0.5">
-            <button
+            <NavItem
+              icon={<LayoutGrid className="w-4 h-4 text-blue-400 shrink-0" />}
+              label={lang === 'fr' ? 'Tableau de Bord' : 'Dashboard'}
+              isActive={activeTab === 'dashboard'}
               onClick={() => handleTabClick('dashboard')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'dashboard'
-                  ? 'bg-blue-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-blue-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Tableau de bord' : 'Dashboard'}
-            >
-              <LayoutGrid className="w-4 h-4 text-blue-400 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Tableau de Bord' : 'Dashboard'}</span>}
-            </button>
+            />
 
-            <button
+            <NavItem
+              icon={<FileText className="w-4 h-4 text-emerald-400 shrink-0" />}
+              label={lang === 'fr' ? 'Mes Fichiers' : 'My Files'}
+              badge={totalDocs}
+              isActive={activeTab === 'library'}
               onClick={() => handleTabClick('library')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'library'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-emerald-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Tous les documents' : 'All Files'}
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Mes Fichiers' : 'My Files'}</span>}
-              </div>
-              {!collapsed && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/30 text-slate-300 font-mono">
-                  {totalDocs}
-                </span>
-              )}
-            </button>
+            />
 
-            <button
+            <NavItem
+              icon={<BookOpen className="w-4 h-4 text-indigo-400 shrink-0" />}
+              label={lang === 'fr' ? 'Manuels Scolaires' : 'School Textbooks'}
+              isActive={activeTab === 'school_books'}
+              onClick={() => handleTabClick('school_books')}
+              collapsed={collapsed}
+              activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
+              title={lang === 'fr' ? 'Bibliothèque de Manuels & Exercices' : 'School Textbooks & Exercises'}
+            />
+
+            <NavItem
+              icon={<Sparkles className="w-4 h-4 text-fuchsia-400 shrink-0" />}
+              label={lang === 'fr' ? 'Résumés & Sources' : 'Summaries & Sources'}
+              isActive={activeTab === 'resumer'}
               onClick={() => handleTabClick('resumer')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'resumer'
-                  ? 'bg-fuchsia-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-fuchsia-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Résumés & Sources IA' : 'AI Summaries'}
-            >
-              <Sparkles className="w-4 h-4 text-fuchsia-400 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Résumés & Sources' : 'Summaries & Sources'}</span>}
-            </button>
+            />
 
-            <button
+            <NavItem
+              icon={<PenTool className="w-4 h-4 text-amber-300 shrink-0" />}
+              label={lang === 'fr' ? 'Bloc-Notes Cahier' : 'Blocknote Sheet'}
+              isActive={activeTab === 'blocknote'}
               onClick={() => handleTabClick('blocknote')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'blocknote'
-                  ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-amber-500 text-slate-950 font-extrabold shadow-sm"
               title={lang === 'fr' ? 'Bloc-Notes Manuscrit' : 'Blocknote Sheet'}
-            >
-              <PenTool className="w-4 h-4 text-amber-300 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Bloc-Notes Cahier' : 'Blocknote Sheet'}</span>}
-            </button>
+            />
           </nav>
         </div>
 
         {/* SECTION 2: STUDY MODES & FLASHCARDS */}
         <div>
-          {!collapsed && (
-            <div className="px-2.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              {lang === 'fr' ? 'Modes de Révision' : 'Study Modes'}
-            </div>
-          )}
+          <SectionDivider
+            title={lang === 'fr' ? 'Modes de Révision' : 'Study Modes'}
+            collapsed={collapsed}
+            icon={<Brain className="w-3.5 h-3.5 text-purple-400" />}
+          />
           <nav className="space-y-0.5">
-            <button
+            <NavItem
+              icon={<Layers className="w-4 h-4 text-rose-400 shrink-0" />}
+              label={lang === 'fr' ? 'Fiches Flashcards' : 'Flashcards'}
+              isActive={activeTab === 'flashcards'}
               onClick={() => handleTabClick('flashcards')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'flashcards'
-                  ? 'bg-rose-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-rose-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Fiches Flashcards Personnalisées' : 'Custom Flashcards'}
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <Layers className="w-4 h-4 text-rose-400 shrink-0" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Fiches Flashcards' : 'Flashcards'}</span>}
-              </div>
-            </button>
+            />
 
-            <button
+            <NavItem
+              icon={<CheckSquare className="w-4 h-4 text-teal-400 shrink-0" />}
+              label={lang === 'fr' ? 'Quiz Recall' : 'Recall Quiz'}
+              isActive={activeTab === 'quiz'}
               onClick={() => handleTabClick('quiz')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'quiz'
-                  ? 'bg-teal-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-teal-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Quiz Active Recall' : 'Active Recall Quiz'}
-            >
-              <CheckSquare className="w-4 h-4 text-teal-400 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Quiz Recall' : 'Recall Quiz'}</span>}
-            </button>
+            />
 
-            <button
+            <NavItem
+              icon={<Zap className="w-4 h-4 text-amber-400 shrink-0" />}
+              label={lang === 'fr' ? 'Labo Bilingue' : 'Bilingual Lab'}
+              isActive={activeTab === 'bilingual'}
               onClick={() => handleTabClick('bilingual')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'bilingual'
-                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Labo Bilingue & Match' : 'Bilingual Lab'}
-            >
-              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Labo Bilingue' : 'Bilingual Lab'}</span>}
-            </button>
+            />
 
             {onOpenCoach && (
               <button
@@ -399,44 +606,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* SECTION 3: DYNAMIC REAL SUBJECT FOLDERS (Only real data created by user) */}
+        {/* SECTION 3: DYNAMIC REAL SUBJECT FOLDERS (Virtualised for performance) */}
         {dynamicSubjects.length > 0 && (
           <div>
-            {!collapsed && (
-              <div className="px-2.5 mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                <span>{lang === 'fr' ? 'Mes Matières' : 'My Subjects'}</span>
-              </div>
-            )}
-            <div className="space-y-0.5">
-              {dynamicSubjects.map((subj) => (
-                <button
-                  key={subj}
-                  onClick={() => handleSelectSubject(subj)}
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-all group cursor-pointer"
-                  title={subj}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <Folder className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300 transition-colors shrink-0" />
-                    {!collapsed && <span className="truncate">{subj}</span>}
-                  </div>
-                  {!collapsed && (
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {subjectCounts[subj]}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            <SectionDivider
+              title={lang === 'fr' ? 'Mes Matières & Dossiers' : 'My Subjects'}
+              collapsed={collapsed}
+              icon={<Folder className="w-3.5 h-3.5 text-amber-400" />}
+            />
+            <VirtualizedSubjectList
+              subjects={dynamicSubjects}
+              subjectCounts={subjectCounts}
+              onSelectSubject={handleSelectSubject}
+              collapsed={collapsed}
+            />
           </div>
         )}
 
-        {/* SECTION 4: STUDY TOOLS & CULTURE (Now includes Guide & Videos directly here) */}
+        {/* SECTION 4: STUDY TOOLS & CULTURE */}
         <div>
-          {!collapsed && (
-            <div className="px-2.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              {lang === 'fr' ? 'Outils & Culture' : 'Tools & Culture'}
-            </div>
-          )}
+          <SectionDivider
+            title={lang === 'fr' ? 'Outils & Culture' : 'Tools & Culture'}
+            collapsed={collapsed}
+            icon={<Sliders className="w-3.5 h-3.5 text-indigo-400" />}
+          />
           <nav className="space-y-0.5">
             {/* Study Guide (inside tools and culture) */}
             <button
@@ -450,83 +643,170 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </button>
 
-            {/* Educational Videos (inside tools and culture) */}
-            <button
-              onClick={wrapAction(onOpenVideos)}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-              title={lang === 'fr' ? 'Vidéos Pédagogiques' : 'Educational Videos'}
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <Video className="w-4 h-4 text-rose-400 shrink-0" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Vidéos de Révision' : 'Study Videos'}</span>}
-              </div>
-            </button>
+            {/* Educational Videos (inside tools and culture) - Web only */}
+            {!isTauri() && (
+              <button
+                onClick={wrapAction(onOpenVideos)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Vidéos Pédagogiques' : 'Educational Videos'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Video className="w-4 h-4 text-rose-400 shrink-0" />
+                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Vidéos de Révision' : 'Study Videos'}</span>}
+                </div>
+              </button>
+            )}
 
-            {/* Famous Quotes */}
-            <button
-              onClick={() => handleTabClick('quotes')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'quotes'
-                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
-              title={lang === 'fr' ? '100+ Citations & Discours' : '100+ Quotes'}
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <Quote className="w-4 h-4 text-amber-400 shrink-0" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? '100+ Citations' : '100+ Quotes'}</span>}
+            {/* Famous Quotes with Collapsible Subnav */}
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-0.5">
+                <div className="flex-1 min-w-0">
+                  <NavItem
+                    icon={<Quote className="w-4 h-4 text-amber-400 shrink-0" />}
+                    label={lang === 'fr' ? '300+ Citations' : '300+ Quotes'}
+                    isActive={activeTab === 'quotes'}
+                    onClick={() => {
+                      handleTabClick('quotes');
+                      onSelectQuotesCategory?.('all', 'all');
+                    }}
+                    collapsed={collapsed}
+                    activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
+                    title={lang === 'fr' ? '300+ Citations & Discours' : '300+ Quotes'}
+                  />
+                </div>
+                {!collapsed && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsQuotesSubnavOpen(prev => !prev);
+                    }}
+                    className={`p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-transform ${isQuotesSubnavOpen ? 'rotate-90 text-amber-400' : ''}`}
+                    title={isQuotesSubnavOpen ? (lang === 'fr' ? 'Masquer sous-menu' : 'Hide sub-menu') : (lang === 'fr' ? 'Déplier Philosophie & Maximes' : 'Expand Philosophy & Maxims')}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-            </button>
 
-            {/* Playlists & Soundscapes */}
-            <button
-              onClick={wrapAction(onOpenPlaylists)}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-              title={lang === 'fr' ? 'Playlists & Bruit Blanc' : 'Playlists & Soundscapes'}
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <Headphones className="w-4 h-4 text-pink-400 shrink-0" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Bruit Blanc & Audio' : 'Audio Soundscapes'}</span>}
-              </div>
-            </button>
+              {/* Sub-category: Collapsible subnav for Philosophy & Maxims */}
+              {!collapsed && isQuotesSubnavOpen && (
+                <div className="pl-3 py-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <button
+                    onClick={() => {
+                      handleTabClick('quotes');
+                      onSelectQuotesCategory?.('philosophy_maxims', 'all');
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 transition-all border border-amber-400/30 group cursor-pointer shadow-xs"
+                    title={lang === 'fr' ? 'Maximes et Principes de Dolfius 1er' : 'Dolfius 1st Maxims'}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0 truncate">
+                      <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0 group-hover:rotate-6 transition-transform" />
+                      <span className="truncate">{lang === 'fr' ? 'Maximes de Dolfius 1er' : 'Dolfius Maxims'}</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleTabClick('quotes');
+                      onSelectQuotesCategory?.('philosophy', 'all');
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-800/60 hover:bg-slate-700/80 transition-all border border-slate-700/60 group cursor-pointer"
+                    title={lang === 'fr' ? 'Philosophie Antique & Moderne' : 'Ancient & Modern Philosophy'}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0 truncate">
+                      <Landmark className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <span className="truncate">{lang === 'fr' ? 'Philosophie' : 'Philosophy'}</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Playlists & Soundscapes - Web only */}
+            {!isTauri() && (
+              <button
+                onClick={wrapAction(onOpenPlaylists)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Playlists & Bruit Blanc' : 'Playlists & Soundscapes'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Headphones className="w-4 h-4 text-pink-400 shrink-0" />
+                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Bruit Blanc & Audio' : 'Audio Soundscapes'}</span>}
+                </div>
+              </button>
+            )}
+
+            {/* Photo Scanner (Handwritten Notes) */}
+            {onOpenPhotoScanner && (
+              <button
+                onClick={wrapAction(onOpenPhotoScanner)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-purple-300 hover:bg-purple-900/30 hover:text-white transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Scanner des notes manuscrites (Photo / Caméra)' : 'Scan handwritten notes (Camera / Photo)'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Camera className="w-4 h-4 text-purple-400 shrink-0" />
+                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Photo Notes Scanner' : 'Photo Scanner'}</span>}
+                </div>
+              </button>
+            )}
+
+            {/* Cross-Device Phone ↔ PC Sync */}
+            {onOpenAuthModal && (
+              <button
+                onClick={wrapAction(onOpenAuthModal)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-300 hover:bg-emerald-900/30 hover:text-white transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Liaison Téléphone ↔ Ordinateur (Firestore)' : 'Phone ↔ PC Sync'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Liaison Téléphone ↔ PC' : 'Phone ↔ PC Sync'}</span>}
+                </div>
+              </button>
+            )}
 
             {/* Semantic Search */}
-            <button
+            <NavItem
+              icon={<Search className="w-4 h-4 text-indigo-400 shrink-0" />}
+              label={lang === 'fr' ? 'Recherche Sémantique' : 'Semantic Search'}
+              isActive={activeTab === 'search'}
               onClick={() => handleTabClick('search')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'search'
-                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Recherche Sémantique' : 'Semantic Search'}
-            >
-              <Search className="w-4 h-4 text-indigo-400 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Recherche Sémantique' : 'Semantic Search'}</span>}
-            </button>
+            />
 
             {/* Local Database */}
-            <button
+            <NavItem
+              icon={<HardDrive className="w-4 h-4 text-emerald-400 shrink-0" />}
+              label={lang === 'fr' ? 'Base Locale PC' : 'Local Database'}
+              isActive={activeTab === 'database'}
               onClick={() => handleTabClick('database')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'database'
-                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
+              collapsed={collapsed}
+              activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Base de Données Locale' : 'Local Database'}
-            >
-              <HardDrive className="w-4 h-4 text-emerald-400 shrink-0" />
-              {!collapsed && <span className="truncate">{lang === 'fr' ? 'Base Locale PC' : 'Local Database'}</span>}
-            </button>
+            />
 
-            {/* Study Progress Backup & Export */}
-            {onOpenBackup && (
+            {/* OneDrive Cloud Hub */}
+            {onOpenOneDrive && (
               <button
-                onClick={wrapAction(onOpenBackup)}
+                onClick={wrapAction(onOpenOneDrive)}
                 className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:bg-white/10 hover:text-white cursor-pointer"
-                title={lang === 'fr' ? 'Sauvegarde & Sécurité de Progression (.JSON)' : 'Study Progress Backup (.JSON)'}
+                title="OneDrive & Synchronisation Cloud"
               >
-                <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Sauvegarde .JSON' : 'Backup .JSON'}</span>}
+                <Cloud className="w-4 h-4 text-sky-400 shrink-0" />
+                {!collapsed && <span className="truncate">OneDrive Cloud</span>}
+              </button>
+            )}
+
+            {/* Download / Install App (Dual Native PC & PWA Hub) */}
+            {onInstallPwa && (
+              <button
+                onClick={wrapAction(onInstallPwa)}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-amber-500 via-amber-600 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-extrabold shadow-md border border-amber-400/50 cursor-pointer mt-1.5"
+                title={lang === 'fr' ? 'Installer sur PC (Micro-version Native ou PWA Web)' : 'Install on PC (Native Desktop or PWA)'}
+              >
+                <Download className="w-4 h-4 text-slate-950 shrink-0 stroke-[2.5]" />
+                {!collapsed && <span className="truncate">{lang === 'fr' ? '🖥️ Installer sur PC' : '🖥️ Install on PC'}</span>}
               </button>
             )}
           </nav>
@@ -570,6 +850,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Keyboard className="w-4 h-4 text-amber-300" />
                 </button>
               )}
+
+              {/* Privacy Policy & Google Compliance Modal Trigger */}
+              {onOpenPrivacy && (
+                <button
+                  onClick={onOpenPrivacy}
+                  className="p-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-400/30 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  title={lang === 'fr' ? 'Confidentialité & Règles Google (RGPD)' : 'Privacy Policy & Google Compliance'}
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                </button>
+              )}
             </div>
 
             {/* Streak & Status */}
@@ -600,6 +891,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Palette className="w-4 h-4" />
             </button>
+
+            {/* Collapsed Privacy button */}
+            {onOpenPrivacy && (
+              <button
+                onClick={onOpenPrivacy}
+                className="w-9 h-9 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 flex items-center justify-center border border-emerald-400/30 transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Confidentialité & Règles Google' : 'Privacy Policy & Google Compliance'}
+              >
+                <ShieldCheck className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -607,4 +909,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
     </>
   );
-};
+});

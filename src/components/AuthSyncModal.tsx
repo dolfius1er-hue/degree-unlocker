@@ -56,13 +56,14 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
     setIsProcessing(true);
     setSyncMessage(null);
     try {
-      const user = await loginWithGoogle();
+      const loginResult = await loginWithGoogle();
+      const user = loginResult.user;
       onUserChanged(user);
       setSyncStatus('success');
       setSyncMessage(
         lang === 'fr'
-          ? `Connecté en tant que ${user.displayName || user.email} ! Vos appareils sont désormais reliés.`
-          : `Connected as ${user.displayName || user.email}! Your devices are now linked.`
+          ? `Connecté en tant que ${user.displayName || user.email || 'Étudiant'} ! Google Drive, Docs et Tasks sont prêts.`
+          : `Connected as ${user.displayName || user.email || 'Student'}! Google Drive, Docs and Tasks are ready.`
       );
       // Auto-sync initial local documents
       if (localDocs.length > 0) {

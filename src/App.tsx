@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, startTransition } from 'react';
 import { SchoolDocument, BlocknoteGuide, AppLanguage, UIPreferences, AppTheme, MenuPosition, CustomTag, StudyProgressBackup } from './types';
 import { INITIAL_SCHOOL_DOCUMENTS } from './data/seedDocuments';
 import { Sidebar, NavTabType } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
+import { fetchWithRetry } from './lib/api-utils';
+
 import { DashboardOverview } from './components/DashboardOverview';
 import { DocumentListView } from './components/DocumentListView';
 import { AiSearchView } from './components/AiSearchView';
@@ -10,6 +12,12 @@ import { ResumerView } from './components/ResumerView';
 import { BlocknoteView } from './components/BlocknoteView';
 import { FamousQuotesView } from './components/FamousQuotesView';
 import { DatabaseManagerView } from './components/DatabaseManagerView';
+import { FlashcardsView } from './components/FlashcardsView';
+import { QuizView } from './components/QuizView';
+import { BilingualLearningView } from './components/BilingualLearningView';
+import { SchoolBooksLibraryView } from './components/SchoolBooksLibraryView';
+
+
 import { NoteEditorModal } from './components/NoteEditorModal';
 import { PdfUploadModal } from './components/PdfUploadModal';
 import { TutorialModal } from './components/TutorialModal';
@@ -17,9 +25,6 @@ import { LocalStorageBrowserModal } from './components/LocalStorageBrowserModal'
 import { EducationalVideosModal } from './components/EducationalVideosModal';
 import { NoteTakingTipsModal } from './components/NoteTakingTipsModal';
 import { StudyPlaylistsModal } from './components/StudyPlaylistsModal';
-import { FlashcardsView } from './components/FlashcardsView';
-import { QuizView } from './components/QuizView';
-import { BilingualLearningView } from './components/BilingualLearningView';
 import { QuoteLoadingModal } from './components/QuoteLoadingModal';
 import { ThemePreferencesModal } from './components/ThemePreferencesModal';
 import { SocraticCoachModal } from './components/SocraticCoachModal';
@@ -31,6 +36,16 @@ import { PdfAnnotationModal } from './components/PdfAnnotationModal';
 import { PresentationModeModal } from './components/PresentationModeModal';
 import { WelcomeOnboardingModal } from './components/WelcomeOnboardingModal';
 import { OneDriveSyncModal } from './components/OneDriveSyncModal';
+import { GoogleWorkspaceModal } from './components/GoogleWorkspaceModal';
+import { GoogleDriveBrowser } from './components/GoogleDriveBrowser';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
+import { InstallGuideModal } from './components/InstallGuideModal';
+import { InstallAppBanner } from './components/InstallAppBanner';
+import { AppUpdateManager } from './components/AppUpdateManager';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { DesktopLayoutWrapper } from './components/DesktopLayoutWrapper';
+import { offlineStorageService } from './services/offlineStorageService';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   onAuthChange, 
@@ -43,33 +58,12 @@ import {
 
 export default function App() {
   const [documents, setDocuments] = useState<SchoolDocument[]>([]);
+  const [isUsingOfflineDB, setIsUsingOfflineDB] = useState<boolean>(false);
 
-  // Restore activeTab from localStorage so users return exactly where they left off
-  const [activeTab, setActiveTab] = useState<NavTabType>(() => {
-    try {
-      const savedTab = localStorage.getItem('degreelocker_active_tab') as NavTabType | null;
-      const validTabs: NavTabType[] = [
-        'dashboard', 
-        'library', 
-        'search', 
-        'resumer', 
-        'blocknote', 
-        'quotes', 
-        'flashcards', 
-        'quiz', 
-        'bilingual', 
-        'database'
-      ];
-      if (savedTab && validTabs.includes(savedTab)) {
-        return savedTab;
-      }
-    } catch (e) {
-      console.warn('Error reading saved activeTab from localStorage', e);
-    }
-    return 'dashboard';
-  });
-
-  // Automatically persist activeTab whenever it changes
+  // Initialize activeTab by checking localStorage session and defaulting to 'dashboard' if none is found
+  const [activeTab, setActiveTab] = useState<NavTabType>('dashboard');
+  
+  // Persist activeTab whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem('degreelocker_active_tab', activeTab);
@@ -101,6 +95,7 @@ export default function App() {
 
   // Cross-device live transfer notifications
   const [deviceToast, setDeviceToast] = useState<{ message: string; docId?: string } | null>(null);
+  const [apiErrorToast, setApiErrorToast] = useState<string | null>(null);
 
   // Whenever selected document changes, persist its ID to localStorage
   useEffect(() => {
@@ -143,6 +138,11 @@ export default function App() {
   const [annotatingDoc, setAnnotatingDoc] = useState<SchoolDocument | null>(null);
   const [isPresentationOpen, setIsPresentationOpen] = useState(false);
   const [isOneDriveOpen, setIsOneDriveOpen] = useState(false);
+  const [isGoogleWorkspaceOpen, setIsGoogleWorkspaceOpen] = useState(false);
+  const [quotesInitialCategory, setQuotesInitialCategory] = useState<string>('all');
+  const [quotesInitialSubcategory, setQuotesInitialSubcategory] = useState<'all' | 'dolfius_4_maximes' | 'image_maximes'>('all');
+  const [isGoogleDriveBrowserOpen, setIsGoogleDriveBrowserOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [presentationDoc, setPresentationDoc] = useState<SchoolDocument | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(() => {
@@ -159,6 +159,85 @@ export default function App() {
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // PWA Service Worker & Install Prompt state
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState<boolean>(false);
+  const [isInstallGuideOpen, setIsInstallGuideOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Dismiss HTML launch splash loader immediately on React mount
+    if (typeof (window as any).dismissSplashLoader === 'function') {
+      (window as any).dismissSplashLoader();
+    } else {
+      const splashLoader = document.getElementById('app-splash-loader');
+      if (splashLoader) {
+        splashLoader.style.opacity = '0';
+        splashLoader.style.transition = 'opacity 0.12s ease-out';
+        setTimeout(() => splashLoader.remove(), 120);
+      }
+    }
+
+    if ('serviceWorker' in navigator && !('__TAURI__' in window)) {
+      navigator.serviceWorker.register('/sw.js').then((registration) => {
+        console.log('ServiceWorker registration successful:', registration.scope);
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  console.log('New website version available; app updated.');
+                }
+              }
+            };
+          }
+        };
+      }).catch((err) => {
+        console.log('ServiceWorker registration failed:', err);
+      });
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setIsPwaInstalled(true);
+    }
+
+    window.addEventListener('appinstalled', () => {
+      setIsPwaInstalled(true);
+      setDeferredPrompt(null);
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsPwaInstalled(true);
+          setDeferredPrompt(null);
+        } else {
+          setIsInstallGuideOpen(true);
+        }
+      } catch (err) {
+        console.error('PWA install prompt error:', err);
+        setIsInstallGuideOpen(true);
+      }
+    } else {
+      setIsInstallGuideOpen(true);
+    }
+  };
+
   // Firebase auth state observer
   useEffect(() => {
     const unsubscribe = onAuthChange((user) => {
@@ -168,14 +247,37 @@ export default function App() {
   }, []);
 
   // Study activity tracking for genuine streak calculation
-  const [activityDates, setActivityDates] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem('degreelocker_activity_dates');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [activityDates, setActivityDates] = useState<string[]>([]);
+
+  // Async initialization for heavy operations
+  useEffect(() => {
+    const initializeAppData = async () => {
+      // 1. Restore activeTab
+      try {
+        const savedTab = localStorage.getItem('degreelocker_active_tab') as NavTabType | null;
+        const validTabs: NavTabType[] = [
+          'dashboard', 'library', 'search', 'resumer', 'blocknote', 
+          'quotes', 'flashcards', 'quiz', 'bilingual', 'database'
+        ];
+        if (savedTab && validTabs.includes(savedTab)) {
+          setActiveTab(savedTab);
+        }
+      } catch (e) {
+        console.warn('Error reading saved activeTab', e);
+      }
+
+      // 2. Restore activity dates
+      try {
+        const raw = localStorage.getItem('degreelocker_activity_dates');
+        if (raw) setActivityDates(JSON.parse(raw));
+      } catch (e) {
+        console.warn('Could not restore activity dates:', e);
+      }
+
+      setIsLoadingInitial(false);
+    };
+    initializeAppData();
+  }, []);
 
   const recordStudyActivity = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -261,16 +363,21 @@ export default function App() {
   useEffect(() => {
     async function fetchPreferences() {
       try {
-        const res = await fetch('/api/preferences');
+        const res = await fetchWithRetry('/api/preferences', {
+          retries: 1,
+          initialDelayMs: 200,
+        });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.theme) {
-            setPreferences(data);
-            if (data.language) setLang(data.language);
+          const prefs = data?.preferences || (data?.theme ? data : null);
+          if (prefs) {
+            setPreferences(prev => ({ ...prev, ...prefs }));
+            if (prefs.language) setLang(prefs.language);
           }
         }
-      } catch (err) {
-        console.warn('Could not load preferences from server, using local defaults');
+      } catch (err: any) {
+        // Fallback silently to local state in desktop/offline environment
+        console.info('Operating with local UI preferences (desktop/offline mode).');
       }
     }
     fetchPreferences();
@@ -278,13 +385,17 @@ export default function App() {
 
   const savePreferencesToServer = async (newPrefs: UIPreferences) => {
     try {
-      await fetch('/api/preferences', {
+      await fetchWithRetry('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPrefs),
+        retries: 3,
       });
-    } catch (err) {
-      console.warn('Failed to save preferences to server:', err);
+    } catch (err: any) {
+      console.warn('Failed to save preferences to server after retries:', err);
+      setApiErrorToast(lang === 'fr'
+        ? 'Échec de la sauvegarde des préférences sur le serveur.'
+        : 'Failed to save preferences to server.');
     }
   };
 
@@ -350,6 +461,8 @@ export default function App() {
         setIsBackupOpen(false);
         setIsPhotoScannerOpen(false);
         setIsAuthModalOpen(false);
+        setIsGoogleWorkspaceOpen(false);
+        setIsGoogleDriveBrowserOpen(false);
         return;
       }
 
@@ -461,45 +574,86 @@ export default function App() {
     return map;
   }, [documents]);
 
-  // Load documents from server on initial mount with resilient fallback
+  // Ultra-fast instant launch: load IndexedDB / Seed data immediately (0ms), then sync with server in background
   useEffect(() => {
     let isMounted = true;
-    async function fetchDocs() {
+
+    async function initializeFastLaunch() {
+      // 1. Instant local restore from IndexedDB or seed data
       try {
-        const res = await fetch('/api/documents');
-        if (res.ok) {
-          const data = await res.json();
-          if (!isMounted) return;
-          if (data && data.documents && Array.isArray(data.documents) && data.documents.length > 0) {
-            setDocuments(data.documents);
-            
-            // Restore previously selected document if saved in localStorage
-            const savedDocId = localStorage.getItem('degreelocker_selected_doc_id');
-            const matchedDoc = savedDocId 
-              ? data.documents.find((d: SchoolDocument) => d.id === savedDocId)
-              : null;
-            const targetDoc = matchedDoc || data.documents[0];
+        const cachedDocs = await offlineStorageService.getAllDocuments();
+        if (!isMounted) return;
+        if (cachedDocs && cachedDocs.length > 0) {
+          const savedDocId = localStorage.getItem('degreelocker_selected_doc_id');
+          const matchedDoc = savedDocId ? cachedDocs.find((d: SchoolDocument) => d.id === savedDocId) : null;
+          const targetDoc = matchedDoc || cachedDocs[0];
+
+          startTransition(() => {
+            setDocuments(cachedDocs);
+            setIsUsingOfflineDB(true);
             setSelectedDocForBlocknote(targetDoc);
             setSelectedDocForSummary(targetDoc);
-          } else if (data && Array.isArray(data.documents)) {
-            // Valid empty array from server
-            setDocuments(data.documents);
+          });
+        } else {
+          startTransition(() => {
+            setDocuments(INITIAL_SCHOOL_DOCUMENTS);
+            setSelectedDocForBlocknote(INITIAL_SCHOOL_DOCUMENTS[0]);
+            setSelectedDocForSummary(INITIAL_SCHOOL_DOCUMENTS[0]);
+          });
+          await offlineStorageService.saveAllDocuments(INITIAL_SCHOOL_DOCUMENTS);
+        }
+      } catch (idbErr) {
+        if (isMounted) {
+          startTransition(() => {
+            setDocuments(INITIAL_SCHOOL_DOCUMENTS);
+          });
+        }
+      } finally {
+        if (isMounted) {
+          startTransition(() => {
+            setIsLoadingInitial(false);
+          });
+          if (typeof (window as any).dismissSplashLoader === 'function') {
+            (window as any).dismissSplashLoader();
+          }
+        }
+      }
+
+      // 2. Silent non-blocking background fetch from server
+      try {
+        const res = await fetchWithRetry('/api/documents', {
+          retries: 1,
+          initialDelayMs: 300,
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data && Array.isArray(data.documents) && data.documents.length > 0) {
+            startTransition(() => {
+              setDocuments(data.documents);
+              setIsUsingOfflineDB(false);
+            });
+            await offlineStorageService.saveAllDocuments(data.documents);
           }
         }
       } catch (err) {
-        // Fallback gracefully without breaking UI
-        console.warn('Notice loading documents from server (using local state):', err);
-      } finally {
-        if (isMounted) {
-          setIsLoadingInitial(false);
-        }
+        console.warn('[Offline Engine] Background server sync skipped, continuing with local documents.');
       }
     }
-    fetchDocs();
+
+    initializeFastLaunch();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  // Auto-persist documents state to IndexedDB on every local mutation
+  useEffect(() => {
+    if (documents && documents.length > 0) {
+      offlineStorageService.saveAllDocuments(documents).catch((err) => {
+        console.warn('[IndexedDB] Failed auto-persisting documents state:', err);
+      });
+    }
+  }, [documents]);
 
   // Tag Management Handlers
   const handleCreateCustomTag = (newTag: CustomTag) => {
@@ -686,32 +840,43 @@ export default function App() {
         }
       }
 
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // 1. Instantly save to local IndexedDB and queue for background sync
+      const fullDoc = payload as SchoolDocument;
+      await offlineStorageService.saveDocument(fullDoc);
+      await offlineStorageService.enqueuePendingChange('create', fullDoc);
 
-      if (!res.ok) {
-        throw new Error('Failed to save to database');
-      }
-
-      const savedData = await res.json();
-      const savedDoc = savedData.document || payload;
-
+      // 2. Optimistic local state update
       setDocuments((prev) => {
-        const idx = prev.findIndex((d) => d.id === savedDoc.id);
+        const idx = prev.findIndex((d) => d.id === fullDoc.id);
         if (idx >= 0) {
           const updated = [...prev];
-          updated[idx] = savedDoc;
+          updated[idx] = fullDoc;
           return updated;
         }
-        return [savedDoc, ...prev];
+        return [fullDoc, ...prev];
       });
 
       if (generateBlocknote) {
-        setSelectedDocForBlocknote(savedDoc);
+        setSelectedDocForBlocknote(fullDoc);
         setActiveTab('blocknote');
+      }
+
+      // 3. Attempt server sync in background if online
+      try {
+        const res = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const savedData = await res.json();
+          const savedDoc = savedData.document || fullDoc;
+          await offlineStorageService.removePendingChange(savedDoc.id);
+          await offlineStorageService.saveDocument(savedDoc);
+          setDocuments((prev) => prev.map((d) => (d.id === savedDoc.id ? savedDoc : d)));
+        }
+      } catch (srvErr) {
+        console.warn('[Offline Engine] Server update queued for background sync:', srvErr);
       }
     } catch (err: any) {
       console.error(err);
@@ -721,7 +886,10 @@ export default function App() {
 
   const handleDeleteDocument = async (id: string) => {
     try {
-      await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      // Immediate local deletion & offline queueing
+      await offlineStorageService.deleteDocument(id);
+      await offlineStorageService.enqueuePendingChange('delete', { id });
+
       setDocuments((prev) => prev.filter((d) => d.id !== id));
       if (selectedDocForBlocknote?.id === id) {
         setSelectedDocForBlocknote(documents.find((d) => d.id !== id) || null);
@@ -729,8 +897,13 @@ export default function App() {
       if (selectedDocForSummary?.id === id) {
         setSelectedDocForSummary(documents.find((d) => d.id !== id) || null);
       }
+
+      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await offlineStorageService.removePendingChange(id);
+      }
     } catch (err) {
-      console.error('Failed to delete doc:', err);
+      console.warn('[Offline Engine] Deletion queued for background sync:', err);
     }
   };
 
@@ -739,17 +912,25 @@ export default function App() {
     if (!doc) return;
 
     const updated = { ...doc, blocknoteReproduction: guide, updatedAt: new Date().toISOString() };
+    
+    // Save locally & queue for sync
+    await offlineStorageService.saveDocument(updated);
+    await offlineStorageService.enqueuePendingChange('update', updated);
+
     setDocuments((prev) => prev.map((d) => (d.id === docId ? updated : d)));
     setSelectedDocForBlocknote(updated);
 
     try {
-      await fetch('/api/documents', {
+      const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
+      if (res.ok) {
+        await offlineStorageService.removePendingChange(docId);
+      }
     } catch (err) {
-      console.error('Failed to sync updated guide to server:', err);
+      console.warn('[Offline Engine] Guide update queued for background sync:', err);
     }
   };
 
@@ -758,17 +939,25 @@ export default function App() {
     if (!doc) return;
 
     const updated = { ...doc, summary, keyPoints, updatedAt: new Date().toISOString() };
+
+    // Save locally & queue for sync
+    await offlineStorageService.saveDocument(updated);
+    await offlineStorageService.enqueuePendingChange('update', updated);
+
     setDocuments((prev) => prev.map((d) => (d.id === docId ? updated : d)));
     setSelectedDocForSummary(updated);
 
     try {
-      await fetch('/api/documents', {
+      const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
+      if (res.ok) {
+        await offlineStorageService.removePendingChange(docId);
+      }
     } catch (err) {
-      console.error('Failed to sync summary to server:', err);
+      console.warn('[Offline Engine] Summary update queued for background sync:', err);
     }
   };
 
@@ -833,7 +1022,8 @@ export default function App() {
       : 'bg-slate-50 text-slate-900';
 
   return (
-    <div className={`min-h-[100dvh] w-full max-w-[100vw] overflow-hidden ${appBgClass} flex font-sans selection:bg-indigo-100 selection:text-indigo-900 transition-colors duration-200`}>
+    <DesktopLayoutWrapper lang={lang} activeTheme={preferences.theme}>
+      <div className={`min-h-[100dvh] w-full max-w-[100vw] overflow-hidden ${appBgClass} flex font-sans selection:bg-indigo-100 selection:text-indigo-900 transition-colors duration-200`}>
       
       {/* Side Menu Navigation (Visible if menuPosition is 'left') */}
       {preferences.menuPosition === 'left' && (
@@ -855,6 +1045,8 @@ export default function App() {
           onOpenCoach={() => setIsCoachOpen(true)}
           onOpenKeyboardShortcuts={() => setIsKeyboardShortcutsOpen(true)}
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
+          onOpenGoogleWorkspace={() => setIsGoogleWorkspaceOpen(true)}
+          onOpenPrivacy={() => setIsPrivacyModalOpen(true)}
           onFilterSubject={(subj) => {
             setActiveSubjectFilter(subj);
             setActiveTab('library');
@@ -869,6 +1061,13 @@ export default function App() {
           activeTheme={preferences.theme}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onInstallPwa={handleInstallPwa}
+          isPwaInstalled={isPwaInstalled}
+          onSelectQuotesCategory={(cat, subcat = 'all') => {
+            setQuotesInitialCategory(cat);
+            setQuotesInitialSubcategory(subcat);
+            setActiveTab('quotes');
+          }}
         />
       )}
 
@@ -890,6 +1089,8 @@ export default function App() {
           onOpenCoach={() => setIsCoachOpen(true)}
           onOpenPhotoScanner={() => setIsPhotoScannerOpen(true)}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenGoogleWorkspace={() => setIsGoogleWorkspaceOpen(true)}
+          onOpenOneDrive={() => setIsOneDriveOpen(true)}
           onOpenKeyboardShortcuts={() => setIsKeyboardShortcutsOpen(true)}
           currentUser={currentUser}
           lang={lang}
@@ -944,6 +1145,23 @@ export default function App() {
             </div>
           )}
 
+          {/* API / 503 error notification banner with retry feedback */}
+          {apiErrorToast && (
+            <div className="mb-5 p-3.5 bg-gradient-to-r from-amber-900 to-amber-950 border border-amber-700/60 text-white rounded-xl shadow-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+                <span className="text-base">⚠️</span>
+                <span>{apiErrorToast}</span>
+              </div>
+              <button
+                onClick={() => setApiErrorToast(null)}
+                className="p-1 hover:bg-amber-800/80 text-amber-300 hover:text-white rounded-md transition-colors cursor-pointer"
+                title="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -952,202 +1170,239 @@ export default function App() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             >
-            {/* Tab 1: Dashboard Overview */}
-            {activeTab === 'dashboard' && (
-              <DashboardOverview
-                documents={documents}
-                onNavigateTab={(tab) => setActiveTab(tab)}
-                onSelectDoc={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setSelectedDocForSummary(doc);
-                  setActiveTab('blocknote');
-                }}
-                onOpenNewNote={() => {
-                  setDocumentToEdit(null);
-                  setIsNoteEditorOpen(true);
-                }}
-                onOpenUpload={() => setIsPdfUploadOpen(true)}
-                onOpenBackup={() => setIsBackupOpen(true)}
-                onOpenTutorial={() => setIsTutorialOpen(true)}
-                onOpenTips={() => setIsTipsOpen(true)}
-                onFilterSubject={(subj) => {
-                  setActiveSubjectFilter(subj);
-                }}
-                lang={lang}
-                activeTheme={preferences.theme}
-              />
-            )}
-
-            {/* Tab 2: Document Library */}
-            {activeTab === 'library' && (
-              <DocumentListView
-                documents={documents}
-                onOpenBlocknote={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setSelectedDocForSummary(doc);
-                  setActiveTab('blocknote');
-                }}
-                onSummarize={(doc) => {
-                  setSelectedDocForSummary(doc);
-                  setSelectedDocForBlocknote(doc);
-                  setActiveTab('resumer');
-                }}
-                onEdit={(doc) => {
-                  setDocumentToEdit(doc);
-                  setIsNoteEditorOpen(true);
-                }}
-                onDelete={handleDeleteDocument}
-                onNewNote={() => {
-                  setDocumentToEdit(null);
-                  setIsNoteEditorOpen(true);
-                }}
-                onUploadPdf={() => setIsPdfUploadOpen(true)}
-                onSwitchToSearch={() => setActiveTab('search')}
-                onOpenFlashcards={(doc) => {
-                  if (doc) {
+              {/* Tab 1: Dashboard Overview */}
+              {activeTab === 'dashboard' && (
+                <DashboardOverview
+                  documents={documents}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onSelectDoc={(doc) => {
                     setSelectedDocForBlocknote(doc);
                     setSelectedDocForSummary(doc);
-                  }
-                  setActiveTab('flashcards');
-                }}
-                onOpenQuiz={(doc) => {
-                  setSelectedDocForQuiz(doc.id);
-                  setSelectedDocForBlocknote(doc);
-                  setSelectedDocForSummary(doc);
-                  setActiveTab('quiz');
-                }}
-                onOpenBilingual={(doc) => {
-                  if (doc) {
+                    setActiveTab('blocknote');
+                  }}
+                  onOpenNewNote={() => {
+                    setDocumentToEdit(null);
+                    setIsNoteEditorOpen(true);
+                  }}
+                  onOpenUpload={() => setIsPdfUploadOpen(true)}
+                  onOpenBackup={() => setIsBackupOpen(true)}
+                  onOpenTutorial={() => setIsTutorialOpen(true)}
+                  onOpenTips={() => setIsTipsOpen(true)}
+                  onFilterSubject={(subj) => {
+                    setActiveSubjectFilter(subj);
+                  }}
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                />
+              )}
+
+              {/* Tab 2: Document Library */}
+              {activeTab === 'library' && (
+                <DocumentListView
+                  documents={documents}
+                  onOpenBlocknote={(doc) => {
                     setSelectedDocForBlocknote(doc);
                     setSelectedDocForSummary(doc);
-                  }
-                  setActiveTab('bilingual');
-                }}
-                onOpenAnnotate={(doc) => {
-                  setAnnotatingDoc(doc);
-                  setIsAnnotationOpen(true);
-                }}
-                onOpenTutorial={() => setIsTutorialOpen(true)}
-                selectedDocForBlocknoteId={selectedDocForBlocknote?.id}
-                lang={lang}
-                customTags={customTags}
-                onCreateTag={handleCreateCustomTag}
-                onDeleteTag={handleDeleteCustomTag}
-                onUpdateDocumentTags={handleUpdateDocumentTags}
-                onSendToPhone={handleSendToPhone}
-              />
-            )}
+                    setActiveTab('blocknote');
+                  }}
+                  onSummarize={(doc) => {
+                    setSelectedDocForSummary(doc);
+                    setSelectedDocForBlocknote(doc);
+                    setActiveTab('resumer');
+                  }}
+                  onEdit={(doc) => {
+                    setDocumentToEdit(doc);
+                    setIsNoteEditorOpen(true);
+                  }}
+                  onDelete={handleDeleteDocument}
+                  onNewNote={() => {
+                    setDocumentToEdit(null);
+                    setIsNoteEditorOpen(true);
+                  }}
+                  onUploadPdf={() => setIsPdfUploadOpen(true)}
+                  onSwitchToSearch={() => setActiveTab('search')}
+                  onOpenFlashcards={(doc) => {
+                    if (doc) {
+                      setSelectedDocForBlocknote(doc);
+                      setSelectedDocForSummary(doc);
+                    }
+                    setActiveTab('flashcards');
+                  }}
+                  onOpenQuiz={(doc) => {
+                    setSelectedDocForQuiz(doc.id);
+                    setSelectedDocForBlocknote(doc);
+                    setSelectedDocForSummary(doc);
+                    setActiveTab('quiz');
+                  }}
+                  onOpenBilingual={(doc) => {
+                    if (doc) {
+                      setSelectedDocForBlocknote(doc);
+                      setSelectedDocForSummary(doc);
+                    }
+                    setActiveTab('bilingual');
+                  }}
+                  onOpenAnnotate={(doc) => {
+                    setAnnotatingDoc(doc);
+                    setIsAnnotationOpen(true);
+                  }}
+                  onOpenTutorial={() => setIsTutorialOpen(true)}
+                  selectedDocForBlocknoteId={selectedDocForBlocknote?.id}
+                  lang={lang}
+                  customTags={customTags}
+                  onCreateTag={handleCreateCustomTag}
+                  onDeleteTag={handleDeleteCustomTag}
+                  onUpdateDocumentTags={handleUpdateDocumentTags}
+                  onSendToPhone={handleSendToPhone}
+                />
+              )}
 
-            {/* Tab 3: AI Semantic Search */}
-            {activeTab === 'search' && (
-              <AiSearchView
-                documents={documents}
-                onOpenDocInBlocknote={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setActiveTab('blocknote');
-                }}
-                onSelectDoc={(doc) => {
-                  setDocumentToEdit(doc);
-                  setIsNoteEditorOpen(true);
-                }}
-                lang={lang}
-              />
-            )}
+              {/* Tab: School Textbooks & Exercises Library */}
+              {activeTab === 'school_books' && (
+                <SchoolBooksLibraryView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onOpenDocInBlocknote={(title, subject, content) => {
+                    const tempDoc: SchoolDocument = {
+                      id: 'book_' + Date.now(),
+                      title: title,
+                      subject: subject,
+                      type: 'typed_note',
+                      content: content,
+                      summary: `Extrait du manuel scolaire: ${title}`,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      tags: ['Manuel Scolaire', subject]
+                    };
+                    setSelectedDocForBlocknote(tempDoc);
+                    setActiveTab('blocknote');
+                  }}
+                />
+              )}
 
-            {/* Tab 4: AI Summaries & Sources Synthesis */}
-            {activeTab === 'resumer' && (
-              <ResumerView
-                documents={documents}
-                selectedDocument={selectedDocForSummary}
-                onSelectDocument={(doc) => setSelectedDocForSummary(doc)}
-                onUpdateDocumentSummary={handleUpdateDocumentSummary}
-                onOpenInBlocknote={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setActiveTab('blocknote');
-                }}
-                onOpenPresentation={(doc) => {
-                  setPresentationDoc(doc);
-                  setIsPresentationOpen(true);
-                }}
-                lang={lang}
-              />
-            )}
+              {/* Tab 3: AI Semantic Search */}
+              {activeTab === 'search' && (
+                <AiSearchView
+                  documents={documents}
+                  onOpenDocInBlocknote={(doc) => {
+                    setSelectedDocForBlocknote(doc);
+                    setActiveTab('blocknote');
+                  }}
+                  onSelectDoc={(doc) => {
+                    setDocumentToEdit(doc);
+                    setIsNoteEditorOpen(true);
+                  }}
+                  lang={lang}
+                />
+              )}
 
-            {/* Tab 5: Blocknote Sheet Companion */}
-            {activeTab === 'blocknote' && (
-              <BlocknoteView
-                document={selectedDocForBlocknote}
-                onUpdateDocumentGuide={handleUpdateDocumentGuide}
-                onOpenDocSelector={() => setActiveTab('library')}
-                onOpenTutorial={() => setIsTutorialOpen(true)}
-                lang={lang}
-                onOpenTips={() => setIsTipsOpen(true)}
-                onOpenVideos={(subject) => handleOpenVideos(subject)}
-              />
-            )}
+              {/* Tab 4: AI Summaries & Sources Synthesis */}
+              {activeTab === 'resumer' && (
+                <ResumerView
+                  documents={documents}
+                  selectedDocument={selectedDocForSummary}
+                  onSelectDocument={(doc) => setSelectedDocForSummary(doc)}
+                  onUpdateDocumentSummary={handleUpdateDocumentSummary}
+                  onOpenInBlocknote={(doc) => {
+                    setSelectedDocForBlocknote(doc);
+                    setActiveTab('blocknote');
+                  }}
+                  onOpenPresentation={(doc) => {
+                    setPresentationDoc(doc);
+                    setIsPresentationOpen(true);
+                  }}
+                  lang={lang}
+                />
+              )}
 
-            {/* Tab 6: 100+ Famous Quotes & Speeches Explorer */}
-            {activeTab === 'quotes' && (
-              <FamousQuotesView
-                lang={lang}
-                onOpenDocWithTopic={(topic) => {
-                  setActiveTab('search');
-                }}
-              />
-            )}
+              {/* Tab 5: Blocknote Sheet Companion */}
+              {activeTab === 'blocknote' && (
+                <BlocknoteView
+                  document={selectedDocForBlocknote}
+                  onUpdateDocumentGuide={handleUpdateDocumentGuide}
+                  onOpenDocSelector={() => setActiveTab('library')}
+                  onOpenTutorial={() => setIsTutorialOpen(true)}
+                  lang={lang}
+                  onOpenTips={() => setIsTipsOpen(true)}
+                  onOpenVideos={(subject) => handleOpenVideos(subject)}
+                />
+              )}
 
-            {/* Tab 7: Flashcards & Leitner Spaced Repetition */}
-            {activeTab === 'flashcards' && (
-              <FlashcardsView
-                documents={documents}
-                lang={lang}
-                onOpenDocInBlocknote={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setActiveTab('blocknote');
-                }}
-                onOpenPlaylists={() => setIsPlaylistsOpen(true)}
-                activeTheme={preferences.theme}
-              />
-            )}
+              {/* Tab 6: 100+ Famous Quotes & Speeches Explorer */}
+              {activeTab === 'quotes' && (
+                <FamousQuotesView
+                  lang={lang}
+                  onOpenDocWithTopic={(topic) => {
+                    setActiveTab('search');
+                  }}
+                  initialCategory={quotesInitialCategory}
+                  initialSubcategory={quotesInitialSubcategory}
+                />
+              )}
 
-            {/* Tab 8: Quiz Arena */}
-            {activeTab === 'quiz' && (
-              <QuizView
-                documents={documents}
-                selectedDocumentId={selectedDocForQuiz || selectedDocForBlocknote?.id}
-                lang={lang}
-                onOpenDocInBlocknote={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setActiveTab('blocknote');
-                }}
-              />
-            )}
+              {/* Tab 7: Flashcards & Leitner Spaced Repetition */}
+              {activeTab === 'flashcards' && (
+                <FlashcardsView
+                  documents={documents}
+                  lang={lang}
+                  onOpenDocInBlocknote={(doc) => {
+                    setSelectedDocForBlocknote(doc);
+                    setActiveTab('blocknote');
+                  }}
+                  onOpenPlaylists={() => setIsPlaylistsOpen(true)}
+                  activeTheme={preferences.theme}
+                />
+              )}
 
-            {/* Tab 9: Bilingual Lab */}
-            {activeTab === 'bilingual' && (
-              <BilingualLearningView
-                documents={documents}
-                lang={lang}
-                onOpenDocInBlocknote={(doc) => {
-                  setSelectedDocForBlocknote(doc);
-                  setActiveTab('blocknote');
-                }}
-                onCompleteExercise={recordStudyActivity}
-              />
-            )}
+              {/* Tab 8: Quiz Arena */}
+              {activeTab === 'quiz' && (
+                <QuizView
+                  documents={documents}
+                  selectedDocumentId={selectedDocForQuiz || selectedDocForBlocknote?.id}
+                  lang={lang}
+                  onOpenDocInBlocknote={(doc) => {
+                    setSelectedDocForBlocknote(doc);
+                    setActiveTab('blocknote');
+                  }}
+                />
+              )}
 
-            {/* Tab 10: Local Database Manager */}
-            {activeTab === 'database' && (
-              <DatabaseManagerView
-                documents={documents}
-                onImportDatabase={handleImportDatabase}
-                onResetSeed={handleResetSeed}
-                lang={lang}
-              />
-            )}
+              {/* Tab 9: Bilingual Lab */}
+              {activeTab === 'bilingual' && (
+                <BilingualLearningView
+                  documents={documents}
+                  lang={lang}
+                  onOpenDocInBlocknote={(doc) => {
+                    setSelectedDocForBlocknote(doc);
+                    setActiveTab('blocknote');
+                  }}
+                  onCompleteExercise={recordStudyActivity}
+                />
+              )}
+
+              {/* Tab 10: Local Database Manager */}
+              {activeTab === 'database' && (
+                <DatabaseManagerView
+                  documents={documents}
+                  onResetSeed={handleResetSeed}
+                  onOpenGoogleWorkspace={() => setIsGoogleWorkspaceOpen(true)}
+                  lang={lang}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </main>
+
+        {/* Mobile Persistent Bottom Navigation Bar */}
+        <MobileBottomNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenUpload={() => setIsPdfUploadOpen(true)}
+          onOpenOneDrive={() => setIsOneDriveOpen(true)}
+          onOpenMenu={() => setIsMobileMenuOpen(true)}
+          lang={lang}
+          activeTheme={preferences.theme}
+        />
       </div>
 
       {/* Socratic AI Study Coach Modal (Anti-Triche & Method) */}
@@ -1354,6 +1609,86 @@ export default function App() {
         lang={lang}
       />
 
+      {/* Google Workspace Hub (Drive, Docs, Tasks) */}
+      <GoogleWorkspaceModal
+        isOpen={isGoogleWorkspaceOpen}
+        onClose={() => setIsGoogleWorkspaceOpen(false)}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        documents={documents}
+        onOpenDriveBrowser={() => setIsGoogleDriveBrowserOpen(true)}
+        onImportDoc={async (newDoc) => {
+          const created: SchoolDocument = {
+            id: newDoc.id || `doc-${Date.now()}`,
+            title: newDoc.title || 'Fichier Google Drive',
+            subject: newDoc.subject || 'Google Drive',
+            summary: newDoc.summary || '',
+            content: newDoc.content || '',
+            type: newDoc.type || 'google_doc',
+            tags: newDoc.tags || ['Google Drive', 'Workspace'],
+            date: newDoc.date || new Date().toISOString().split('T')[0],
+            pdfDataUrl: newDoc.pdfDataUrl,
+            fileName: newDoc.fileName,
+            fileSize: newDoc.fileSize,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setDocuments((prev) => [created, ...prev]);
+          setSelectedDocForBlocknote(created);
+          setSelectedDocForSummary(created);
+
+          try {
+            await fetch('/api/documents', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(created),
+            });
+          } catch (e) {
+            console.warn('Could not persist imported Drive document to server API:', e);
+          }
+        }}
+        lang={lang}
+      />
+
+      {/* Dedicated Google Drive Browser & Ingestion Modal */}
+      <GoogleDriveBrowser
+        isOpen={isGoogleDriveBrowserOpen}
+        onClose={() => setIsGoogleDriveBrowserOpen(false)}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onIngestDocument={async (newDoc) => {
+          const created: SchoolDocument = {
+            id: newDoc.id || `doc-${Date.now()}`,
+            title: newDoc.title || 'Fichier Google Drive',
+            subject: newDoc.subject || 'Google Drive',
+            summary: newDoc.summary || '',
+            content: newDoc.content || '',
+            type: newDoc.type || 'google_doc',
+            tags: newDoc.tags || ['Google Drive', 'Workspace'],
+            date: newDoc.date || new Date().toISOString().split('T')[0],
+            pdfDataUrl: newDoc.pdfDataUrl,
+            fileName: newDoc.fileName,
+            fileSize: newDoc.fileSize,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setDocuments((prev) => [created, ...prev]);
+          setSelectedDocForBlocknote(created);
+          setSelectedDocForSummary(created);
+
+          try {
+            await fetch('/api/documents', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(created),
+            });
+          } catch (e) {
+            console.warn('Could not persist ingested Drive document to server API:', e);
+          }
+        }}
+        lang={lang}
+      />
+
       {/* OneDrive & Cloud Sync Modal */}
       <OneDriveSyncModal
         isOpen={isOneDriveOpen}
@@ -1361,9 +1696,47 @@ export default function App() {
         currentUser={currentUser}
         documents={documents}
         onSyncComplete={(synced) => setDocuments(synced)}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
         lang={lang}
       />
-    </div>
+
+      {/* Global PWA Auto-Update Manager Toast */}
+      <AppUpdateManager lang={lang} />
+
+      {/* Public Privacy Policy & Google Compliance Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        lang={lang}
+      />
+
+      {/* PWA Installation & Launch Guide Modal */}
+      <InstallGuideModal
+        isOpen={isInstallGuideOpen}
+        onClose={() => setIsInstallGuideOpen(false)}
+        lang={lang}
+        deferredPrompt={deferredPrompt}
+        onInstallSuccess={() => setIsPwaInstalled(true)}
+        isPwaInstalled={isPwaInstalled}
+      />
+
+      {/* Floating PWA Installation Banner */}
+      {deferredPrompt && (
+        <InstallAppBanner
+          deferredPrompt={deferredPrompt}
+          lang={lang}
+          onInstallSuccess={() => {
+            setIsPwaInstalled(true);
+            setDeferredPrompt(null);
+          }}
+          onDismiss={() => setDeferredPrompt(null)}
+        />
+      )}
+
+      {/* Offline & IndexedDB Status Indicator */}
+      <OfflineIndicator lang={lang} isUsingOfflineDB={isUsingOfflineDB} />
+      </div>
+    </DesktopLayoutWrapper>
   );
 }
 

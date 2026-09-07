@@ -226,6 +226,7 @@ export interface UIPreferences {
   language: AppLanguage;
   accentColor?: string;
   fontSize?: 'compact' | 'normal' | 'spacious';
+  customGeminiKey?: string;
   updatedAt?: string;
 }
 

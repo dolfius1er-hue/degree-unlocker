@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SchoolDocument, Flashcard, FlashcardRating, AppTheme } from '../types';
 import { INITIAL_FLASHCARDS } from '../data/seedFlashcards';
+import { fetchWithRetry, fetchJsonWithRetry } from '../lib/api-utils';
 import { 
   Sparkles, 
   RotateCw, 
@@ -102,14 +103,9 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
     async function loadCards() {
       try {
         setLoading(true);
-        const res = await fetch('/api/flashcards');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.flashcards && Array.isArray(data.flashcards)) {
-            setCards(data.flashcards);
-          } else {
-            setCards([]);
-          }
+        const data = await fetchJsonWithRetry<{ flashcards: Flashcard[] }>('/api/flashcards');
+        if (data && data.flashcards && Array.isArray(data.flashcards)) {
+          setCards(data.flashcards);
         } else {
           setCards([]);
         }
@@ -258,7 +254,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
     }));
 
     try {
-      await fetch('/api/flashcards', {
+      await fetchJsonWithRetry('/api/flashcards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedCard),
@@ -353,7 +349,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
     setCards(updated);
 
     try {
-      await fetch('/api/flashcards', {
+      await fetchJsonWithRetry('/api/flashcards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createdCard),
@@ -376,7 +372,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
     const updated = cards.filter((c) => c.id !== cardId);
     setCards(updated);
     try {
-      await fetch(`/api/flashcards/${cardId}`, { method: 'DELETE' });
+      await fetchJsonWithRetry(`/api/flashcards/${cardId}`, { method: 'DELETE' });
     } catch (err) {
       console.error('Failed to delete card:', err);
     }
@@ -409,7 +405,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
     }
 
     try {
-      const res = await fetch('/api/generate-flashcards', {
+      const data = await fetchJsonWithRetry<{ flashcards: Flashcard[]; error?: string }>('/api/generate-flashcards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -420,29 +416,33 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
           cardCount,
           language: lang,
         }),
-      });
+      }, { retries: 3, initialDelayMs: 600 });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.flashcards && data.flashcards.length > 0) {
-          const newGeneratedCards: Flashcard[] = data.flashcards;
-          setCards((prev) => [...newGeneratedCards, ...prev]);
-          setGenerateMsg(
-            lang === 'fr'
-              ? `Succès ! ${newGeneratedCards.length} fiches créées dans "${subject}".`
-              : `Success! ${newGeneratedCards.length} flashcards generated in "${subject}".`
-          );
-          setTimeout(() => {
-            setActiveTab('decks');
-          }, 1200);
-        } else {
-          setGenerateMsg(lang === 'fr' ? 'Aucune fiche n\'a pu être générée.' : 'No flashcards generated.');
-        }
+      if (data && data.flashcards && data.flashcards.length > 0) {
+        const newGeneratedCards: Flashcard[] = data.flashcards;
+        setCards((prev) => [...newGeneratedCards, ...prev]);
+        setGenerateMsg(
+          lang === 'fr'
+            ? `Succès ! ${newGeneratedCards.length} fiches créées dans "${subject}".`
+            : `Success! ${newGeneratedCards.length} flashcards generated in "${subject}".`
+        );
+        setTimeout(() => {
+          setActiveTab('decks');
+        }, 1200);
       } else {
-        setGenerateMsg(lang === 'fr' ? 'Erreur lors de la génération des fiches.' : 'Error generating flashcards.');
+        setGenerateMsg(data?.error || (lang === 'fr' ? 'Aucune fiche n\'a pu être générée.' : 'No flashcards generated.'));
       }
     } catch (err: any) {
-      setGenerateMsg(err.message || 'Error generating cards');
+      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
+      if (isUnavailable) {
+        setGenerateMsg(
+          lang === 'fr'
+            ? 'Le modèle Gemini est actuellement en forte demande. Une nouvelle tentative a été effectuée automatiquement. Veuillez réessayer dans quelques instants.'
+            : 'Gemini model is experiencing high demand. Automatic retries completed. Please try again in a moment.'
+        );
+      } else {
+        setGenerateMsg(err.message || 'Error generating cards');
+      }
     } finally {
       setIsGenerating(false);
     }

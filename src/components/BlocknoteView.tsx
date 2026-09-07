@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SchoolDocument, BlocknoteGuide, PaperStyle, HandwritingFont, BlocknoteLine, SourceValidationResult } from '../types';
 import { getSubjectBadgeClass } from '../utils/colors';
 import { exportNotebookAsPdf } from '../utils/notebookPdfExport';
+import { isTauri } from '../lib/tauri-bridge';
 import confetti from 'canvas-confetti';
 import { 
   PenTool, 
@@ -606,7 +607,7 @@ export const BlocknoteView: React.FC<BlocknoteViewProps> = ({
             </button>
           )}
 
-          {onOpenVideos && (
+          {onOpenVideos && !isTauri() && (
             <button
               onClick={() => onOpenVideos(document.subject)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200/80 font-semibold transition-colors"

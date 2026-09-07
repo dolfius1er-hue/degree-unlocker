@@ -1,36 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { SchoolDocument, AppLanguage } from '../types';
+import { fetchJsonWithRetry } from '../lib/api-utils';
 import { 
   Database, 
-  Download, 
-  Upload, 
   RotateCcw, 
   FileText, 
-  Code, 
-  Layers, 
   HardDrive,
   Check,
-  AlertTriangle,
-  Server,
   ShieldCheck,
-  Lock,
-  WifiOff,
   Cpu,
-  HelpCircle,
-  Coins,
-  Globe,
-  DollarSign,
-  Folder,
-  Sparkles,
   RefreshCw,
   FolderOpen,
-  FileSpreadsheet
+  FileSpreadsheet,
+  CloudUpload,
+  Globe,
+  Sparkles,
+  Lock,
+  Coins,
+  WifiOff,
+  AlertTriangle,
+  Code
 } from 'lucide-react';
 
 interface DatabaseManagerViewProps {
   documents: SchoolDocument[];
-  onImportDatabase: (docs: SchoolDocument[]) => void;
+  onImportDatabase?: (docs: SchoolDocument[]) => void;
   onResetSeed: () => void;
+  onOpenGoogleWorkspace?: () => void;
   lang?: AppLanguage;
 }
 
@@ -69,24 +65,21 @@ interface ServerDatabaseStatus {
 
 export const DatabaseManagerView: React.FC<DatabaseManagerViewProps> = ({
   documents,
-  onImportDatabase,
   onResetSeed,
+  onOpenGoogleWorkspace,
   lang = 'fr',
 }) => {
-  const [copiedSchema, setCopiedSchema] = useState(false);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
   const [diskStatus, setDiskStatus] = useState<ServerDatabaseStatus | null>(null);
   const [loadingDiskStatus, setLoadingDiskStatus] = useState(false);
-  const [exportingBundle, setExportingBundle] = useState(false);
+  const [copiedSchema, setCopiedSchema] = useState(false);
   const [activeFaqTab, setActiveFaqTab] = useState<'privacy' | 'gemini' | 'exporting'>('privacy');
 
   // Fetch live disk status from backend
   const fetchDiskStatus = async () => {
     setLoadingDiskStatus(true);
     try {
-      const res = await fetch('/api/database/status');
-      if (res.ok) {
-        const data = await res.json();
+      const data = await fetchJsonWithRetry<ServerDatabaseStatus>('/api/database/status');
+      if (data) {
         setDiskStatus(data);
       }
     } catch (err) {
@@ -105,48 +98,20 @@ export const DatabaseManagerView: React.FC<DatabaseManagerViewProps> = ({
   const pdfCount = documents.filter(d => d.type === 'pdf').length;
   const wordCount = documents.filter(d => d.type === 'word_docx').length;
   const excelCount = documents.filter(d => d.type === 'excel_sheet').length;
-  const noteCount = documents.filter(d => d.type === 'typed_note' || d.type === 'handwritten_scan' || !d.type).length;
   const totalWords = documents.reduce((acc, d) => acc + (d.content ? d.content.split(/\s+/).length : 0), 0);
 
   // Subject breakdown
-  const initialSubjectMap: Record<string, number> = {};
-  const subjectMap = documents.reduce((acc, d) => {
+  const subjectMap = documents.reduce((acc: Record<string, number>, d) => {
     const s = d.subject || 'General';
     acc[s] = (acc[s] || 0) + 1;
     return acc;
-  }, initialSubjectMap);
+  }, {});
 
   // Format bytes helper
   const formatBytes = (bytes: number) => {
     if (!bytes || bytes === 0) return '0 KB';
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     return `${Math.round(bytes / 1024)} KB`;
-  };
-
-  // Export JSON (Documents Only)
-  const handleExportDatabase = () => {
-    const jsonStr = JSON.stringify(documents, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `inside_pc_school_notes_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Export Complete Bundle (Documents + Flashcards)
-  const handleExportCompleteBundle = async () => {
-    setExportingBundle(true);
-    try {
-      window.location.href = '/api/database/export-complete';
-    } catch (err) {
-      console.error('Export error:', err);
-    } finally {
-      setTimeout(() => setExportingBundle(false), 1500);
-    }
   };
 
   // Export Database Metadata to CSV
@@ -195,57 +160,11 @@ export const DatabaseManagerView: React.FC<DatabaseManagerViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `inside_pc_school_notes_metadata_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `degree_unlocker_metadata_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  // Import JSON
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const parsed = JSON.parse(reader.result as string);
-        
-        // Check if full bundle or standard documents array
-        if (parsed.version === '2.0' && Array.isArray(parsed.documents)) {
-          // Unified bundle
-          const res = await fetch('/api/database/import-complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(parsed),
-          });
-          if (res.ok) {
-            onImportDatabase(parsed.documents);
-            setImportStatus(
-              lang === 'fr'
-                ? `Sauvegarde complète restaurée avec succès (${parsed.documents.length} cours, ${parsed.flashcards?.length || 0} fiches flash) !`
-                : `Complete backup restored successfully (${parsed.documents.length} notes, ${parsed.flashcards?.length || 0} flashcards)!`
-            );
-            fetchDiskStatus();
-          }
-        } else if (Array.isArray(parsed)) {
-          onImportDatabase(parsed);
-          setImportStatus(
-            lang === 'fr'
-              ? `Importation réussie de ${parsed.length} cours !`
-              : `Successfully imported ${parsed.length} school documents!`
-          );
-          fetchDiskStatus();
-        } else {
-          alert(lang === 'fr' ? 'Format de base de données JSON non valide.' : 'Invalid database format. Expected JSON array or backup bundle.');
-        }
-        setTimeout(() => setImportStatus(null), 4000);
-      } catch (err) {
-        alert(lang === 'fr' ? 'Impossible de lire ce fichier JSON.' : 'Could not parse JSON file.');
-      }
-    };
-    reader.readAsText(file);
   };
 
   const schemaDefinition = `{
@@ -364,42 +283,31 @@ export const DatabaseManagerView: React.FC<DatabaseManagerViewProps> = ({
       </div>
 
       {/* BACKUP, EXPORT & PORTABILITY ACTIONS */}
-      <div className="bg-white rounded-xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-        <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-          <HardDrive className="w-5 h-5 text-indigo-600" />
-          <span>{lang === 'fr' ? 'Sauvegarde et Portabilité sur votre PC' : 'Local PC Backup & Complete Export'}</span>
+      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+          <HardDrive className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <span>{lang === 'fr' ? 'Exportation & Sauvegarde Sécurisée' : 'Export & Cloud Security'}</span>
         </h3>
-        <p className="text-xs text-slate-600 mb-5">
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-5">
           {lang === 'fr' 
-            ? "Vous pouvez télécharger l'intégralité de vos cours et fiches sous forme de fichier JSON unique pour le copier sur une clé USB ou un autre ordinateur, ou restaurer une sauvegarde précédente."
-            : "Export the full inside-PC database (notes + spaced repetition flashcards) as a standalone JSON bundle to transfer via USB or keep safe offline."}
+            ? "Exportez vos cours et documents vers Google Drive ou téléchargez l'inventaire complet de vos cours au format CSV pour Excel ou Google Sheets."
+            : "Export your notes and documents directly to Google Drive or download a complete inventory CSV for Excel or Google Sheets."}
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Export Complete Bundle */}
-          <button
-            id="btn-export-complete-database"
-            onClick={handleExportCompleteBundle}
-            disabled={exportingBundle}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition-colors shadow-xs"
-          >
-            <Download className="w-4 h-4" />
-            <span>
-              {lang === 'fr' 
-                ? (exportingBundle ? 'Téléchargement...' : 'Exporter le Pack Complet PC (Cours + Fiches)') 
-                : (exportingBundle ? 'Downloading...' : 'Export Complete PC Bundle (Notes + Flashcards)')}
-            </span>
-          </button>
-
-          {/* Export Notes Only */}
-          <button
-            id="btn-export-notes-only"
-            onClick={handleExportDatabase}
-            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <FileText className="w-4 h-4 text-slate-500" />
-            <span>{lang === 'fr' ? 'Exporter Cours JSON' : 'Export Notes JSON'}</span>
-          </button>
+          {/* Export to Google Drive / Workspace */}
+          {onOpenGoogleWorkspace && (
+            <button
+              id="btn-export-google-drive"
+              onClick={onOpenGoogleWorkspace}
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
+            >
+              <CloudUpload className="w-4 h-4 text-indigo-200" />
+              <span>
+                {lang === 'fr' ? '☁️ Exporter vers Google Drive / Docs' : '☁️ Export to Google Drive / Docs'}
+              </span>
+            </button>
+          )}
 
           {/* Export Metadata CSV */}
           <button
@@ -409,20 +317,8 @@ export const DatabaseManagerView: React.FC<DatabaseManagerViewProps> = ({
             title={lang === 'fr' ? 'Exporter la liste et les métadonnées de tous les cours en fichier CSV (Excel, LibreOffice, Google Sheets)' : 'Export document metadata inventory to CSV (Excel / Sheets)'}
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{lang === 'fr' ? '📊 Exporter Métadonnées (CSV / Excel)' : '📊 Export Metadata (CSV / Excel)'}</span>
+            <span>{lang === 'fr' ? '📊 Exporter Inventaire Métadonnées (CSV)' : '📊 Export Inventory Metadata (CSV)'}</span>
           </button>
-
-          {/* Import JSON */}
-          <label className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer shadow-2xs">
-            <Upload className="w-4 h-4 text-indigo-600" />
-            <span>{lang === 'fr' ? 'Restaurer une Sauvegarde JSON' : 'Restore JSON Backup'}</span>
-            <input
-              type="file"
-              accept=".json,application/json"
-              onChange={handleImportFile}
-              className="hidden"
-            />
-          </label>
 
           {/* Reset Seed */}
           <button
@@ -432,19 +328,12 @@ export const DatabaseManagerView: React.FC<DatabaseManagerViewProps> = ({
                 onResetSeed();
               }
             }}
-            className="px-3.5 py-2.5 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 transition-colors ml-auto"
+            className="px-3.5 py-2.5 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 transition-colors ml-auto cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{lang === 'fr' ? 'Restaurer les cours exemples' : 'Restore Default Samples'}</span>
           </button>
         </div>
-
-        {importStatus && (
-          <p className="mt-3 text-xs text-emerald-700 font-semibold flex items-center gap-1.5 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
-            <Check className="w-4 h-4" />
-            {importStatus}
-          </p>
-        )}
       </div>
 
       {/* METRICS & ACADEMIC CORPUS OVERVIEW */}
