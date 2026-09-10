@@ -123,7 +123,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   // Keyboard navigation for study mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (activeTab !== 'study' || activeTab === 'create' || sessionCompleted) return;
+      if (activeTab !== 'study' || sessionCompleted) return;
 
       if (e.code === 'Space') {
         e.preventDefault();

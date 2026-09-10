@@ -1,0 +1,33 @@
+{
+  "appId": "com.degreeunlocker.academy",
+  "productName": "DegreeUnlocker",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "electron.cjs",
+    "dist/**/*",
+    "public/**/*",
+    "package.json"
+  ],
+  "extraMetadata": {
+    "main": "electron.cjs"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "public/icon-512.png"
+  },
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "DegreeUnlocker"
+  }
+}

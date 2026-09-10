@@ -164,13 +164,78 @@ h1, h2, h3, .font-heading {
   /* Windows 11 Modern Desktop Fluent Styling */
   .win11-window {
     border-radius: 1.25rem;
-    border: 1px solid rgba(226, 232, 240, 0.85);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(20px);
   }
   .dark .win11-window {
-    border-color: rgba(30, 41, 59, 0.85);
-    box-shadow: 0 25px 50px -15px rgba(0, 0, 0, 0.55), 0 0 1px rgba(255, 255, 255, 0.08);
+    border-color: rgba(51, 65, 85, 0.7);
+    box-shadow: 0 30px 70px -18px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  /* Fluent Window Titlebar Controls & Action Buttons */
+  @keyframes win11BtnScaleFadeIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.9) translateY(-2px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .win11-window [data-win-action="download"],
+  .win11-window [data-win-action="share"],
+  .win11-window #btn-win-download-pdf,
+  .win11-window #btn-win-share-link,
+  .win11-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    animation: win11BtnScaleFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+  }
+
+  .win11-window [data-win-action="download"]:hover,
+  .win11-window [data-win-action="share"]:hover,
+  .win11-window #btn-win-download-pdf:hover,
+  .win11-window #btn-win-share-link:hover,
+  .win11-action-btn:hover {
+    transform: translateY(-0.5px) scale(1.03);
+  }
+
+  .win11-window [data-win-action="download"]:active,
+  .win11-window [data-win-action="share"]:active,
+  .win11-window #btn-win-download-pdf:active,
+  .win11-window #btn-win-share-link:active,
+  .win11-action-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Silky Page and Element Transitions */
+  .page-transition-enter {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  .page-transition-enter-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Fluent Card Hover Lift */
+  .fluent-card {
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
+  }
+  .fluent-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  }
+  .dark .fluent-card:hover {
+    box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.15);
   }
 
   .win11-modal {
@@ -198,6 +263,283 @@ h1, h2, h3, .font-heading {
     background: linear-gradient(to right, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.5));
     padding: 1px;
   }
+}
+
+/* ============================================================
+   PC HARDCORE ONYX WORKSTATION THEME & TACTICAL CURSOR SUITE
+   ============================================================ */
+
+/* 1. Precision CSS-Based Tactical Cursor Suite (Scoped strictly to .pc-hardcore-onyx) */
+html.pc-hardcore-onyx,
+body.pc-hardcore-onyx,
+.pc-hardcore-onyx,
+.pc-hardcore-onyx * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M3 3L10.5 21L13.5 13.5L21 10.5L3 3Z' fill='%23090a0f' stroke='%23f59e0b' stroke-width='1.75' stroke-linejoin='round'/%3E%3Ccircle cx='4.5' cy='4.5' r='1.5' fill='%23fbbf24'/%3E%3C/svg%3E") 3 3, default;
+}
+
+/* Precision Pointer for Interactive Elements */
+.pc-hardcore-onyx a,
+.pc-hardcore-onyx button,
+.pc-hardcore-onyx [role="button"],
+.pc-hardcore-onyx .cursor-pointer,
+.pc-hardcore-onyx select,
+.pc-hardcore-onyx input[type="button"],
+.pc-hardcore-onyx input[type="submit"],
+.pc-hardcore-onyx input[type="reset"],
+.pc-hardcore-onyx input[type="checkbox"],
+.pc-hardcore-onyx input[type="radio"],
+.pc-hardcore-onyx label[for],
+.pc-hardcore-onyx [tabindex="0"] {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28' fill='none'%3E%3Ccircle cx='14' cy='14' r='9' stroke='%23f59e0b' stroke-width='1.5' stroke-dasharray='3 2' fill='rgba(245,158,11,0.08)'/%3E%3Cline x1='14' y1='2' x2='14' y2='8' stroke='%23fbbf24' stroke-width='1.75' stroke-linecap='round'/%3E%3Cline x1='14' y1='20' x2='14' y2='26' stroke='%23fbbf24' stroke-width='1.75' stroke-linecap='round'/%3E%3Cline x1='2' y1='14' x2='8' y2='14' stroke='%23fbbf24' stroke-width='1.75' stroke-linecap='round'/%3E%3Cline x1='20' y1='14' x2='26' y2='14' stroke='%23fbbf24' stroke-width='1.75' stroke-linecap='round'/%3E%3Ccircle cx='14' cy='14' r='2.5' fill='%23f59e0b'/%3E%3C/svg%3E") 14 14, pointer !important;
+}
+
+/* Precision Crosshair / I-Beam for Text, Code & Inputs */
+.pc-hardcore-onyx input[type="text"],
+.pc-hardcore-onyx input[type="search"],
+.pc-hardcore-onyx input[type="number"],
+.pc-hardcore-onyx input[type="email"],
+.pc-hardcore-onyx input[type="password"],
+.pc-hardcore-onyx textarea,
+.pc-hardcore-onyx [contenteditable="true"],
+.pc-hardcore-onyx .select-text,
+.pc-hardcore-onyx pre,
+.pc-hardcore-onyx code {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cline x1='12' y1='2' x2='12' y2='22' stroke='%23fbbf24' stroke-width='1.75' stroke-linecap='round'/%3E%3Cline x1='6' y1='3' x2='18' y2='3' stroke='%23f59e0b' stroke-width='1.75' stroke-linecap='round'/%3E%3Cline x1='6' y1='21' x2='18' y2='21' stroke='%23f59e0b' stroke-width='1.75' stroke-linecap='round'/%3E%3Cline x1='8' y1='12' x2='16' y2='12' stroke='%23fbbf24' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, text !important;
+}
+
+/* Grab & Dragging Precision Cursors */
+.pc-hardcore-onyx .cursor-grab,
+.pc-hardcore-onyx [draggable="true"] {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M7 8V16M12 5V19M17 8V16M4 11H20M4 13H20' stroke='%23f59e0b' stroke-width='1.75' stroke-linecap='round'/%3E%3Crect x='3' y='3' width='18' height='18' rx='4' stroke='%23f59e0b' stroke-width='1.2' stroke-dasharray='2 2' fill='rgba(15,23,42,0.7)'/%3E%3C/svg%3E") 12 12, grab !important;
+}
+
+.pc-hardcore-onyx .cursor-grabbing {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Crect x='4' y='4' width='16' height='16' rx='3' fill='%23f59e0b' stroke='%23fbbf24' stroke-width='1.75'/%3E%3Cpath d='M8 12H16M12 8V16' stroke='%23090a0f' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, grabbing !important;
+}
+
+/* Disabled & Locked */
+.pc-hardcore-onyx [disabled],
+.pc-hardcore-onyx .cursor-not-allowed {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='9' stroke='%23ef4444' stroke-width='2' fill='rgba(15,23,42,0.9)'/%3E%3Cline x1='6' y1='6' x2='18' y2='18' stroke='%23ef4444' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, not-allowed !important;
+}
+
+/* Hardcore Onyx Smooth Backdrop Blur & Entrance Animations */
+@keyframes hardcoreOnyxBlurIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.985) translateY(6px);
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    backdrop-filter: blur(16px);
+  }
+}
+
+.pc-hardcore-onyx-entry {
+  animation: hardcoreOnyxBlurIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pc-hardcore-onyx .backdrop-blur-glass {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+/* 2. Complete Color & Aesthetic Transformation */
+html.pc-hardcore-onyx,
+body.pc-hardcore-onyx,
+.pc-hardcore-onyx {
+  --bg-primary: #050608;   /* Deep Obsidian Tactical Black */
+  --bg-card: #0b0d13;      /* Carbon Titanium Card */
+  --bg-surface: #11141c;   /* Elevated Command Surface */
+  --text-primary: #f8fafc; /* Crisp Tactical Pure White */
+  --text-secondary: #94a3b8;/* Slate 400 */
+  --text-muted: #64748b;   /* Slate 500 */
+  --border-color: #1e2230; /* Gunmetal Structure */
+  --border-subtle: #141722;/* Subtle Gunmetal */
+  --accent-color: #f59e0b; /* Laser Amber */
+  --accent-cyan: #38bdf8;  /* Workstation Cyan */
+  background-color: #050608 !important;
+  color: #f8fafc !important;
+}
+
+/* Hardcore Full Background Overrides */
+.pc-hardcore-onyx .bg-white,
+.pc-hardcore-onyx .bg-slate-50,
+.pc-hardcore-onyx .bg-slate-100,
+.pc-hardcore-onyx .bg-zinc-50,
+.pc-hardcore-onyx .bg-zinc-100,
+.pc-hardcore-onyx .bg-gray-50,
+.pc-hardcore-onyx .bg-gray-100 {
+  background-color: #0b0d13 !important;
+  color: #f8fafc !important;
+  border-color: #1e2230 !important;
+}
+
+/* Light Gradient Overrides for Hardcore Mode */
+.pc-hardcore-onyx [class*="from-amber-50"],
+.pc-hardcore-onyx [class*="from-indigo-50"],
+.pc-hardcore-onyx [class*="from-slate-50"],
+.pc-hardcore-onyx [class*="from-rose-50"],
+.pc-hardcore-onyx [class*="via-white"],
+.pc-hardcore-onyx [class*="to-indigo-50"],
+.pc-hardcore-onyx [class*="to-amber-50"],
+.pc-hardcore-onyx [class*="to-slate-50"] {
+  --tw-gradient-from: #131722 var(--tw-gradient-from-position) !important;
+  --tw-gradient-via: #0b0d13 var(--tw-gradient-via-position) !important;
+  --tw-gradient-to: #181c28 var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via, #0b0d13), var(--tw-gradient-to) !important;
+  background-color: #0b0d13 !important;
+  color: #f8fafc !important;
+}
+
+.pc-hardcore-onyx .bg-slate-900,
+.pc-hardcore-onyx .bg-slate-950,
+.pc-hardcore-onyx .bg-zinc-900,
+.pc-hardcore-onyx .bg-zinc-950,
+.pc-hardcore-onyx .bg-gray-900,
+.pc-hardcore-onyx .bg-gray-950 {
+  background-color: #050608 !important;
+}
+
+.pc-hardcore-onyx .bg-slate-800,
+.pc-hardcore-onyx .bg-zinc-800,
+.pc-hardcore-onyx .bg-gray-800 {
+  background-color: #11141c !important;
+}
+
+.pc-hardcore-onyx .bg-slate-800\/80,
+.pc-hardcore-onyx .bg-slate-900\/80,
+.pc-hardcore-onyx .bg-slate-900\/90 {
+  background-color: rgba(11, 13, 19, 0.94) !important;
+  backdrop-filter: blur(20px);
+}
+
+/* Hardcore Buttons: Complete tactical lock-in transformation */
+.pc-hardcore-onyx button.bg-indigo-600,
+.pc-hardcore-onyx button.bg-blue-600,
+.pc-hardcore-onyx .bg-indigo-600,
+.pc-hardcore-onyx .bg-blue-600 {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 50%, #78350f 100%) !important;
+  color: #ffffff !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(254, 243, 199, 0.3) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.025em;
+}
+
+.pc-hardcore-onyx button.bg-indigo-600:hover,
+.pc-hardcore-onyx button.bg-blue-600:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #92400e 100%) !important;
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.45) !important;
+}
+
+.pc-hardcore-onyx button.bg-amber-400,
+.pc-hardcore-onyx button.bg-amber-500 {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+  color: #050608 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.35) !important;
+}
+
+/* Secondary & Ghost Buttons */
+.pc-hardcore-onyx button.bg-slate-800,
+.pc-hardcore-onyx button.bg-slate-700,
+.pc-hardcore-onyx button.bg-slate-100 {
+  background-color: #11141c !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #1e2230 !important;
+}
+
+.pc-hardcore-onyx button.bg-slate-800:hover,
+.pc-hardcore-onyx button.bg-slate-700:hover,
+.pc-hardcore-onyx button.bg-slate-100:hover {
+  background-color: #1a1e2b !important;
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+}
+
+/* Hardcore Border Overrides */
+.pc-hardcore-onyx .border-slate-100,
+.pc-hardcore-onyx .border-slate-200,
+.pc-hardcore-onyx .border-slate-300,
+.pc-hardcore-onyx .border-slate-400,
+.pc-hardcore-onyx .border-zinc-200,
+.pc-hardcore-onyx .border-zinc-300,
+.pc-hardcore-onyx .border-gray-200 {
+  border-color: #1e2230 !important;
+}
+
+.pc-hardcore-onyx .border-slate-700,
+.pc-hardcore-onyx .border-slate-800,
+.pc-hardcore-onyx .border-zinc-700,
+.pc-hardcore-onyx .border-zinc-800 {
+  border-color: #181c28 !important;
+}
+
+/* Hardcore Text Contrasts */
+.pc-hardcore-onyx .text-slate-900,
+.pc-hardcore-onyx .text-slate-800,
+.pc-hardcore-onyx .text-zinc-900,
+.pc-hardcore-onyx .text-zinc-800,
+.pc-hardcore-onyx .text-gray-900,
+.pc-hardcore-onyx .text-gray-800 {
+  color: #f8fafc !important;
+}
+
+.pc-hardcore-onyx .text-slate-600,
+.pc-hardcore-onyx .text-slate-700,
+.pc-hardcore-onyx .text-zinc-600,
+.pc-hardcore-onyx .text-zinc-700 {
+  color: #94a3b8 !important;
+}
+
+.pc-hardcore-onyx .text-slate-500,
+.pc-hardcore-onyx .text-zinc-500 {
+  color: #64748b !important;
+}
+
+/* Inputs & Form Controls in Hardcore */
+.pc-hardcore-onyx input,
+.pc-hardcore-onyx textarea,
+.pc-hardcore-onyx select {
+  background-color: #08090e !important;
+  border-color: #1e2230 !important;
+  color: #f8fafc !important;
+}
+
+.pc-hardcore-onyx input:focus,
+.pc-hardcore-onyx textarea:focus,
+.pc-hardcore-onyx select:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+  outline: none !important;
+}
+
+/* Workstation High-Performance Dense Layout Tweaks */
+.pc-hardcore-onyx table {
+  border-color: #1e2230;
+}
+
+.pc-hardcore-onyx tr:hover {
+  background-color: rgba(245, 158, 11, 0.06) !important;
+}
+
+.pc-hardcore-onyx .win11-window,
+.pc-hardcore-onyx .win11-modal {
+  background-color: #0b0d13 !important;
+  border-color: #1e2230 !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.98), 0 0 1px rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Custom Onyx smooth scrollbars */
+.pc-hardcore-onyx ::-webkit-scrollbar-thumb {
+  background: #1e2230;
+  border-radius: 9999px;
+}
+.pc-hardcore-onyx ::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
 }
 
 /* Custom smooth scrollbars */

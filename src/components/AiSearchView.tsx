@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SchoolDocument, SearchResponse, SourceValidationResult, AppLanguage, FullTextSearchResult } from '../types';
 import { fetchJsonWithRetry } from '../lib/api-utils';
 import { getSubjectBadgeClass } from '../utils/colors';
@@ -120,20 +120,48 @@ export const AiSearchView: React.FC<AiSearchViewProps> = ({
 
   // Search History State (last 10 queries stored in localStorage)
   const SEARCH_HISTORY_STORAGE_KEY = 'degree_unlocker_ai_search_history';
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // Hydrate search history client-safely and consume pending search queries
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          return parsed.slice(0, 10);
+          setSearchHistory(parsed.slice(0, 10));
         }
       }
     } catch (e) {
       console.warn('Failed to read search history from localStorage:', e);
     }
-    return [];
-  });
+
+    // Check for pending search query passed from header or shortcuts
+    const checkPendingSearch = () => {
+      try {
+        const pending = localStorage.getItem('degreelocker_pending_search');
+        if (pending && pending.trim()) {
+          setParagraphQuery(pending.trim());
+          setQuery(pending.trim());
+          localStorage.removeItem('degreelocker_pending_search');
+        }
+      } catch (e) {}
+    };
+
+    checkPendingSearch();
+
+    const handleSearchEvent = (e: any) => {
+      if (e?.detail?.query) {
+        setParagraphQuery(e.detail.query);
+        setQuery(e.detail.query);
+      }
+    };
+
+    window.addEventListener('degreelocker:search', handleSearchEvent);
+    return () => {
+      window.removeEventListener('degreelocker:search', handleSearchEvent);
+    };
+  }, []);
 
   const saveQueryToHistory = (newQuery: string) => {
     const trimmed = newQuery.trim();

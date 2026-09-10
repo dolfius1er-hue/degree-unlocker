@@ -1,4 +1,15 @@
-export type DocumentType = 'pdf' | 'typed_note' | 'handwritten_scan' | 'study_guide' | 'word_docx' | 'excel_sheet' | 'google_doc';
+export type DocumentType = 
+  | 'pdf' 
+  | 'typed_note' 
+  | 'handwritten_scan' 
+  | 'study_guide' 
+  | 'word_docx' 
+  | 'excel_sheet' 
+  | 'google_doc' 
+  | 'blocknote'
+  | 'presentation_slides'
+  | 'opendocument'
+  | 'image_scan';
 
 export type PaperStyle = 'ruled' | 'grid' | 'dots' | 'legal' | 'seyes';
 
@@ -68,8 +79,77 @@ export interface BlocknoteGuide {
   handwritingTips: string[];
 }
 
+// -------------------------------------------------------------
+// OFFLINE SYNC & QUEUE TYPES
+// -------------------------------------------------------------
+export type SyncOperationAction = 'create' | 'update' | 'delete' | 'sync_backup' | 'save_score' | 'goal_sync';
+export type SyncItemType = 'document' | 'flashcard' | 'quiz_score' | 'study_goal' | 'note' | 'preferences' | 'vocabulary';
+export type SyncItemStatus = 'pending' | 'syncing' | 'failed' | 'synced';
+
+export interface PendingSyncItem {
+  id: string;
+  action: SyncOperationAction;
+  itemType: SyncItemType;
+  title: string;
+  data: any;
+  timestamp: number;
+  attempts: number;
+  lastError?: string;
+  status: SyncItemStatus;
+}
+
+export interface SyncStatusReport {
+  isSyncing: boolean;
+  isOnline: boolean;
+  pendingCount: number;
+  failedCount: number;
+  syncedCount: number;
+  totalCount: number;
+  lastSyncTime: number | null;
+  queue: PendingSyncItem[];
+}
+
+// -------------------------------------------------------------
+// DAILY STUDY GOALS & ACADEMIC MILESTONES
+// -------------------------------------------------------------
+export type StudyGoalCategory = 'focus_time' | 'flashcards' | 'quizzes' | 'reading' | 'notes' | 'custom';
+
+export interface DailyStudyGoal {
+  id: string;
+  title: string;
+  titleFr: string;
+  targetValue: number;
+  currentValue: number;
+  unit: 'minutes' | 'cards' | 'questions' | 'notes' | 'tasks';
+  unitFr: 'minutes' | 'fiches' | 'questions' | 'cours' | 'tâches';
+  category: StudyGoalCategory;
+  completed: boolean;
+  color: 'amber' | 'indigo' | 'emerald' | 'cyan' | 'purple' | 'rose';
+  iconName: 'clock' | 'layers' | 'check-square' | 'book-open' | 'pen-tool' | 'star';
+  updatedAt?: string;
+}
+
+export interface CustomMilestone {
+  id: string;
+  title: string;
+  completed: boolean;
+  subject?: string;
+  priority?: 'high' | 'normal';
+  createdAt: string;
+}
+
+export interface DailyGoalsState {
+  date: string; // YYYY-MM-DD
+  streakDays: number;
+  goals: DailyStudyGoal[];
+  customMilestones: CustomMilestone[];
+  lastCompletedDate?: string;
+}
+
 export interface SourceValidationResult {
   score: number; // 0 - 100
+  overallScore?: number;
+  notesSummary?: string;
   status: 'reliable' | 'needs_verification' | 'unverified';
   academicLevel: string;
   isGrounded: boolean; // Anti-hallucination verification
@@ -158,6 +238,8 @@ export interface SchoolDocument {
   summary?: string;
   keyPoints?: string[];
   fileName?: string;
+  originalFileName?: string;
+  fullContent?: string;
   fileSize?: number;
   pdfDataUrl?: string; // base64 encoded pdf
   localFilePath?: string; // Stored path on server disk
@@ -165,6 +247,19 @@ export interface SchoolDocument {
   sourceValidation?: SourceValidationResult;
   blocknoteReproduction?: BlocknoteGuide;
   annotations?: PdfPageAnnotation[];
+  definitions?: { term: string; definition: string }[];
+  formulas?: { name: string; formula: string; explanation?: string }[];
+  examTips?: string[];
+  suggestedQuestions?: { question: string; answer: string }[];
+  cornellNotes?: { cues: string[]; notes: string[]; summary: string };
+  difficultyLevel?: string;
+  curriculumDomain?: string;
+  generatedFlashcardsCount?: number;
+  wordCount?: number;
+  estimatedReadingTimeMinutes?: number;
+  isPinned?: boolean;
+  pinPriority?: 'high' | 'medium' | 'normal';
+  pinColor?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -216,8 +311,28 @@ export interface WordSearchResult {
 
 export type AppLanguage = 'fr' | 'en';
 
-export type AppTheme = 'light' | 'dark' | 'midnight' | 'paper';
+export type AppTheme = 'light' | 'dark' | 'midnight' | 'paper' | 'hardcore';
 export type MenuPosition = 'left' | 'top';
+
+export type NavTabType = 
+  | 'dashboard' 
+  | 'library' 
+  | 'school_books'
+  | 'search' 
+  | 'resumer' 
+  | 'blocknote' 
+  | 'quotes' 
+  | 'flashcards' 
+  | 'quiz' 
+  | 'bilingual' 
+  | 'database'
+  | 'english'
+  | 'spanish'
+  | 'german'
+  | 'latin'
+  | 'tutorial'
+  | 'tips'
+  | 'privacy';
 
 export interface UIPreferences {
   theme: AppTheme;

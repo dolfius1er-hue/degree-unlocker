@@ -1,0 +1,8 @@
+{
+  "name": "degreeunlocker",
+  "productName": "DegreeUnlocker",
+  "version": "1.0.0",
+  "description": "DegreeUnlocker Standalone Desktop App",
+  "main": "electron-main.cjs",
+  "author": "DegreeUnlocker"
+}

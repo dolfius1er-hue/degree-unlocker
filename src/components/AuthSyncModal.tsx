@@ -364,9 +364,14 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                     />
                   </svg>
                 )}
-                <span>
-                  {lang === 'fr' ? 'Se connecter avec Google (Compte Principal)' : 'Sign in with Google (Primary Account)'}
-                </span>
+                <div className="flex flex-col items-center">
+                  <span>
+                    {lang === 'fr' ? 'Se connecter avec Google (Compte Liste Ouverte)' : 'Sign in with Google (Open Access)'}
+                  </span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal">
+                    {lang === 'fr' ? '✓ Accès ouvert à tous les emails (aucune liste blanche requise)' : '✓ Open access for all email addresses'}
+                  </span>
+                </div>
               </button>
 
               <div className="relative flex py-2 items-center">

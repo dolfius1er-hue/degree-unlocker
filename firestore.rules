@@ -1,17 +1,65 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each student can read and write their own documents and subcollections across phone & computer
+    // Default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Root user profile
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      match /{allSubcollections=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow get, write: if isOwner(userId);
+
+      // User document subcollections
+      match /documents/{docId} {
+        allow get, list, write: if isOwner(userId);
+      }
+
+      match /flashcards/{cardId} {
+        allow get, list, write: if isOwner(userId);
+      }
+
+      match /transfers/{transferId} {
+        allow get, list, write: if isOwner(userId);
+      }
+
+      match /settings/{settingId} {
+        allow get, write: if isOwner(userId);
+      }
+
+      match /preferences/{prefId} {
+        allow get, write: if isOwner(userId);
+      }
+
+      match /study_goals/{goalId} {
+        allow get, list, write: if isOwner(userId);
+      }
+
+      match /quiz_history/{quizId} {
+        allow get, list, write: if isOwner(userId);
       }
     }
 
-    // Temporary pairing codes to link smartphone to PC in 1 click
+    // Temporary pairing codes for smartphone <-> PC quick link
     match /pairings/{pairingCode} {
+      allow get, create, update: if isValidId(pairingCode);
+      allow delete: if isSignedIn();
+    }
+
+    // Connection test document
+    match /test/{docId} {
       allow read, write: if true;
     }
   }

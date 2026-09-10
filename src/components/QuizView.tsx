@@ -41,10 +41,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
   lang = 'fr',
   onOpenDocInBlocknote,
 }) => {
-  // Document selection
+  // Document selection & source mode
+  const [sourceMode, setSourceMode] = useState<'doc' | 'topic' | 'custom'>('topic');
   const [selectedDocId, setSelectedDocId] = useState<string>(
     selectedDocumentId || (documents.length > 0 ? documents[0].id : '')
   );
+  const [topicInput, setTopicInput] = useState('Histoire - Guerres mondiales et relations internationales');
   const [customText, setCustomText] = useState('');
   const [useCustomText, setUseCustomText] = useState(false);
 
@@ -117,14 +119,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
     };
   }, [isTimerActive, isSubmitted]);
 
-  // Generate Quiz from document or custom text
-  const handleGenerateQuiz = async () => {
+  // Generate Quiz from document, topic or custom text
+  const handleGenerateQuiz = async (overrideTopic?: string) => {
     setIsLoading(true);
     setError(null);
     setIsSubmitted(false);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setTimeSpentSeconds(0);
+
+    const activeTopic = (typeof overrideTopic === 'string' ? overrideTopic : topicInput).trim();
 
     try {
       const payload: any = {
@@ -133,17 +137,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
         language: lang,
       };
 
-      if (useCustomText && customText.trim().length > 20) {
+      if (sourceMode === 'topic' || overrideTopic) {
+        if (!activeTopic) {
+          throw new Error(lang === 'fr' ? 'Veuillez saisir un sujet ou une notion à tester.' : 'Please enter a topic or concept to test.');
+        }
+        payload.content = activeTopic;
+        payload.title = `Quiz: ${activeTopic}`;
+        payload.subject = 'Général';
+      } else if (sourceMode === 'custom' && customText.trim().length >= 2) {
         payload.content = customText;
         payload.title = lang === 'fr' ? 'Texte Personnalisé' : 'Custom Text';
         payload.subject = 'General';
+      } else if (sourceMode === 'doc' && activeDoc) {
+        payload.documentId = activeDoc.id;
+        payload.content = activeDoc.content;
+        payload.title = activeDoc.title;
+        payload.subject = activeDoc.subject;
       } else if (activeDoc) {
         payload.documentId = activeDoc.id;
         payload.content = activeDoc.content;
         payload.title = activeDoc.title;
         payload.subject = activeDoc.subject;
       } else {
-        throw new Error(lang === 'fr' ? 'Veuillez sélectionner un cours ou saisir un texte.' : 'Please select a document or enter text.');
+        throw new Error(lang === 'fr' ? 'Veuillez sélectionner un cours ou saisir un sujet.' : 'Please select a document or enter a topic.');
       }
 
       const data = await fetchJsonWithRetry<{ questions: QuizQuestion[]; error?: string }>('/api/quiz/generate', {
@@ -162,13 +178,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
       console.error('Quiz generation error:', err);
       const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
       if (isUnavailable) {
-        setError(
-          lang === 'fr'
-            ? 'Le modèle Gemini est actuellement en forte demande. Une nouvelle tentative a été effectuée automatiquement. Veuillez réessayer dans quelques instants.'
-            : 'Gemini model is experiencing high demand. Automatic retries completed. Please try again in a moment.'
-        );
+        setError(lang === 'fr' 
+          ? 'Le service d’IA est temporairement surchargé (503). Veuillez réessayer dans quelques secondes.'
+          : 'AI service is temporarily experiencing high load (503). Retrying momentarily...');
       } else {
-        setError(err.message || 'Erreur lors de la génération du quiz');
+        setError(err.message || (lang === 'fr' ? 'Erreur lors de la génération du quiz.' : 'Failed to generate quiz.'));
       }
     } finally {
       setIsLoading(false);
@@ -375,26 +389,54 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
       {/* QUIZ CONFIGURATION / GENERATOR PANEL */}
       {questions.length === 0 && (
-        <div className="bg-white rounded-xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div 
+          data-no-drag
+          onMouseDown={(e) => e.stopPropagation()}
+          className="bg-white rounded-xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Brain className="w-5 h-5 text-indigo-600" />
               <span>{lang === 'fr' ? 'Générer un Nouveau Quiz' : 'Generate a New Quiz'}</span>
             </h3>
 
+            {/* 3 Source Modes */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
               <button
-                onClick={() => setUseCustomText(false)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                  !useCustomText ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                type="button"
+                data-no-drag
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSourceMode('topic');
+                }}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  sourceMode === 'topic' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {lang === 'fr' ? 'Sujet / Notion' : 'Topic / Concept'}
+              </button>
+              <button
+                type="button"
+                data-no-drag
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSourceMode('doc');
+                }}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  sourceMode === 'doc' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {lang === 'fr' ? 'Depuis un cours' : 'From a note'}
               </button>
               <button
-                onClick={() => setUseCustomText(true)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                  useCustomText ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                type="button"
+                data-no-drag
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSourceMode('custom');
+                }}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  sourceMode === 'custom' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {lang === 'fr' ? 'Texte libre / dicté' : 'Custom / Voice text'}
@@ -402,16 +444,82 @@ export const QuizView: React.FC<QuizViewProps> = ({
             </div>
           </div>
 
-          {/* Select Source */}
-          {!useCustomText ? (
+          {/* Mode 1: Free Topic Input with quick academic chips */}
+          {sourceMode === 'topic' && (
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase text-slate-600 block">
+                {lang === 'fr' ? 'Sujet, concept ou chapitre à tester' : 'Topic, concept or chapter to test'}
+              </label>
+              <div className="relative">
+                <input
+                  id="quiz-topic-input"
+                  type="text"
+                  data-no-drag
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleGenerateQuiz();
+                    }
+                  }}
+                  placeholder={lang === 'fr' ? 'Ex: La Guerre Froide 1947-1991, Suites géométriques, ATP synthase, Mécanique quantique...' : 'e.g. World War II, Quadratic equations, Mitosis & Meiosis, Cell respiration...'}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                />
+                {topicInput && (
+                  <button
+                    type="button"
+                    data-no-drag
+                    onClick={() => setTopicInput('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700 px-2 py-1 rounded-md"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Fast Academic Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-bold text-slate-500 mr-1">
+                  {lang === 'fr' ? 'Suggestions rapides :' : 'Quick suggestions:'}
+                </span>
+                {[
+                  { label: 'Histoire : Guerres mondiales', query: 'Histoire de France - Les deux Guerres Mondiales et la reconstruction' },
+                  { label: 'Maths : Analyse & Dérivées', query: 'Mathématiques - Dérivation, limites et suites numériques' },
+                  { label: 'SVT : Génétique & Méiose', query: 'SVT - Génétique, mitose, méiose et diversité des allèles' },
+                  { label: 'Physique : Ondes & Optique', query: 'Physique-Chimie - Ondes mécaniques, électromagnétiques et optique' },
+                  { label: 'Philo : Conscience & Liberté', query: 'Philosophie - La conscience, l’inconscient et la liberté morale' },
+                  { label: 'Anglais : Vocabulaire B2/C1', query: 'Anglais - Vocabulaire académique et idiomes B2/C1' },
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    data-no-drag
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTopicInput(chip.query);
+                      handleGenerateQuiz(chip.query);
+                    }}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 text-[11px] font-semibold rounded-lg border border-slate-200 transition-all cursor-pointer"
+                  >
+                    ⚡ {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mode 2: Select Course Document */}
+          {sourceMode === 'doc' && (
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-slate-600 block">
                 {lang === 'fr' ? 'Choisir le cours à évaluer' : 'Select course note to test'}
               </label>
               <select
+                data-no-drag
                 value={selectedDocId}
                 onChange={(e) => setSelectedDocId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
               >
                 {documents.map((doc) => (
                   <option key={doc.id} value={doc.id}>
@@ -425,7 +533,10 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 </p>
               )}
             </div>
-          ) : (
+          )}
+
+          {/* Mode 3: Custom Text / Voice transcription */}
+          {sourceMode === 'custom' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase text-slate-600">
@@ -438,6 +549,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 )}
               </div>
               <textarea
+                data-no-drag
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
                 placeholder={lang === 'fr' ? 'Collez un extrait de cours, un chapitre d’histoire, un théorème ou utilisez le micro ci-dessus...' : 'Paste any chapter text, math theorem, or record via microphone...'}
@@ -457,8 +569,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <button
                     key={num}
                     type="button"
+                    data-no-drag
                     onClick={() => setQuestionCount(num)}
-                    className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                    className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                       questionCount === num
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -479,8 +592,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <button
                     key={diff}
                     type="button"
+                    data-no-drag
                     onClick={() => setDifficulty(diff)}
-                    className={`py-2 text-xs font-bold rounded-lg border capitalize transition-all ${
+                    className={`py-2 text-xs font-bold rounded-lg border capitalize transition-all cursor-pointer ${
                       difficulty === diff
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -497,9 +611,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <div className="pt-2 flex items-center justify-between">
             <button
               id="btn-generate-quiz"
-              onClick={handleGenerateQuiz}
+              onClick={() => handleGenerateQuiz()}
               disabled={isLoading}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
             >
               <Sparkles className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               <span>

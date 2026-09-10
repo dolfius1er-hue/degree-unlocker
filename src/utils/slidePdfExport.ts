@@ -148,7 +148,7 @@ export function exportSlidesDeckPdf(docData: SchoolDocument, lang: AppLanguage =
     doc.rect(12, 12, pageWidth - 24, 2.5, 'F');
 
     // Header Badge & Slide Number
-    const badgeText = slide.badge || docData.subject.toUpperCase();
+    const badgeText = slide.badge || (docData.subject || 'DOCUMENT').toUpperCase();
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(165, 180, 252); // Indigo-300

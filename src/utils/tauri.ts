@@ -4,4 +4,5 @@
  */
 
 export * from '../lib/tauri-bridge';
+export * from '../hooks/useTauriDesktopWorkstation';
 export { default } from '../lib/tauri-bridge';

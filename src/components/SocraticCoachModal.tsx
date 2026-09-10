@@ -25,6 +25,140 @@ interface SocraticCoachModalProps {
   lang: AppLanguage;
 }
 
+export type CoachPersonaId = 'socrate' | 'descartes' | 'curie' | 'hugo' | 'smith';
+
+export interface CoachPersona {
+  id: CoachPersonaId;
+  nameFr: string;
+  nameEn: string;
+  titleFr: string;
+  titleEn: string;
+  icon: string;
+  color: string;
+  greetingFr: string;
+  greetingEn: string;
+  quickPromptsFr: string[];
+  quickPromptsEn: string[];
+}
+
+export const COACH_PERSONAS: CoachPersona[] = [
+  {
+    id: 'socrate',
+    nameFr: 'Coach Socrate',
+    nameEn: 'Coach Socrates',
+    titleFr: 'Maïeutique & Questionnement Actif',
+    titleEn: 'Socratic Dialogue & Active Inquiry',
+    icon: '🏛️',
+    color: 'from-amber-600 to-indigo-700',
+    greetingFr: "Bonjour ! Je suis Socrate. Je ne vous enseignerai rien, je poserai seulement des questions pour faire accoucher votre esprit de la vérité.",
+    greetingEn: "Hello! I am Socrates. I shall teach you nothing; I will only ask questions to draw out the truth from your mind.",
+    quickPromptsFr: [
+      "Aide-moi à structurer mon plan de révision",
+      "Quelle est la méthode pour analyser une citation ?",
+      "Comment gérer mon temps pendant l'épreuve ?",
+      "Donne-moi un indice pour retenir ce chapitre"
+    ],
+    quickPromptsEn: [
+      "Help me structure my revision schedule",
+      "What is the method to analyze a quote?",
+      "How to manage my time during the exam?",
+      "Give me a conceptual clue for this topic"
+    ]
+  },
+  {
+    id: 'descartes',
+    nameFr: 'Coach René Descartes',
+    nameEn: 'Coach René Descartes',
+    titleFr: 'Rigueur Logique & Mathématiques',
+    titleEn: 'Logical Rigor & Mathematics',
+    icon: '📐',
+    color: 'from-blue-600 to-cyan-700',
+    greetingFr: "Bienvenue. Appliquons le doute méthodique : décomposons chaque problème complexe en autant de parcelles simples que possible.",
+    greetingEn: "Welcome. Let us apply methodical doubt: divide each complex problem into as many simple parts as possible.",
+    quickPromptsFr: [
+      "Comment mener une démonstration par récurrence parfaite ?",
+      "Aide-moi à vérifier ma logique dans ce problème de maths",
+      "Quelles sont les 4 règles du Discours de la méthode ?",
+      "Comment ne pas faire d'erreurs de calcul sous stress ?"
+    ],
+    quickPromptsEn: [
+      "How to write a perfect proof by induction?",
+      "Help me verify my step-by-step logic in math",
+      "What are the 4 rules of Discourse on Method?",
+      "How to avoid algebraic calculation errors under pressure?"
+    ]
+  },
+  {
+    id: 'curie',
+    nameFr: 'Coach Marie Curie',
+    nameEn: 'Coach Marie Curie',
+    titleFr: 'Physique, Chimie & Démarche Expérimentale',
+    titleEn: 'Physics, Chemistry & Experimental Method',
+    icon: '⚛️',
+    color: 'from-emerald-600 to-teal-800',
+    greetingFr: "Bienvenue dans le laboratoire. En sciences, rien n'est à craindre, tout est à comprendre. Définissons l'expérience et les équations.",
+    greetingEn: "Welcome to the laboratory. In science, nothing is to be feared, it is only to be understood. Let us structure the experiment and formulas.",
+    quickPromptsFr: [
+      "Comment réussir le bilan de matière et les équations-bilan ?",
+      "Explique-moi la méthode de résolution des lois de Newton",
+      "Comment analyser un spectre RMN ou UV-Visible au Bac ?",
+      "Donne-moi les astuces pour réussir l'Épreuve Pratique (ECE)"
+    ],
+    quickPromptsEn: [
+      "How to master stoichiometry and mole balances?",
+      "Explain the step-by-step resolution of Newton's laws",
+      "How to analyze NMR or UV-Vis spectra for exams?",
+      "Give me tips for practical laboratory physics exams"
+    ]
+  },
+  {
+    id: 'hugo',
+    nameFr: 'Coach Victor Hugo',
+    nameEn: 'Coach Victor Hugo',
+    titleFr: 'Littérature, Dissertation & Éloquence',
+    titleEn: 'Literature, Essay Method & Eloquence',
+    icon: '✒️',
+    color: 'from-rose-600 to-purple-800',
+    greetingFr: "Salutations ! La liberté commence où l'ignorance finit. Structurons votre problématique et votre plan dialectique avec puissance.",
+    greetingEn: "Greetings! Freedom begins where ignorance ends. Let us craft your thesis statement and dialectic outline with power.",
+    quickPromptsFr: [
+      "Comment trouver une problématique percutante en dissertation ?",
+      "Donne-moi la structure idéale du plan Thèse-Antithèse-Synthèse",
+      "Comment réussir l'explication linéaire à l'Oral de Français ?",
+      "Quelles figures de style mobiliser dans un commentaire ?"
+    ],
+    quickPromptsEn: [
+      "How to formulate a compelling dissertation thesis?",
+      "Give me the ideal outline structure for literature essays",
+      "How to excel at oral text commentary exams?",
+      "What rhetorical devices should I highlight in analysis?"
+    ]
+  },
+  {
+    id: 'smith',
+    nameFr: 'Coach Adam Smith',
+    nameEn: 'Coach Adam Smith',
+    titleFr: 'Économie, SES & Sciences Politiques',
+    titleEn: 'Economics, Social Sciences & Geopolitics',
+    icon: '📊',
+    color: 'from-amber-600 to-emerald-800',
+    greetingFr: "Bonjour ! Analysons les mécanismes de marché, les politiques publiques et la dynamique économique globale avec méthode.",
+    greetingEn: "Good day! Let us analyze market mechanisms, public policies, and global economic dynamics with systematic rigor.",
+    quickPromptsFr: [
+      "Comment expliquer la régulation du marché par les prix ?",
+      "Quelle est la méthode de l'épreuve d'Épreuve Composée en SES ?",
+      "Comment analyser les graphiques de politique monétaire ?",
+      "Aide-moi à comprendre l'inflation et la croissance économique"
+    ],
+    quickPromptsEn: [
+      "How to explain price elasticity and market equilibrium?",
+      "What is the essay methodology for economics exams?",
+      "How to analyze monetary policy and central bank charts?",
+      "Help me understand inflation and economic growth cycles"
+    ]
+  }
+];
+
 export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
   isOpen,
   onClose,
@@ -32,28 +166,23 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
   currentDocument,
   lang = 'fr',
 }) => {
+  const [activePersonaId, setActivePersonaId] = useState<CoachPersonaId>('socrate');
+  const activePersona = COACH_PERSONAS.find(p => p.id === activePersonaId) || COACH_PERSONAS[0];
+
   const [messages, setMessages] = useState<SocraticMessage[]>([
     {
       id: 'welcome-1',
       sender: 'coach',
       text: lang === 'fr'
-        ? "Bonjour ! Je suis votre Conseiller Pédagogique Socratique. Je suis là pour vous aider à comprendre la méthode, structurer vos révisions, et vous poser les bonnes questions pour réussir — sans jamais faire le travail ou donner la réponse à votre place !"
-        : "Hello! I am your Socratic Study Coach. I am here to help you understand academic methods, structure your revision plans, and guide your thinking with hints — without ever giving direct answers or solving homework for you!",
+        ? activePersona.greetingFr
+        : activePersona.greetingEn,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       hints: lang === 'fr'
-        ? ["Méthode de dissertation", "Plan de révision", "Indices conceptuels"]
-        : ["Essay methodology", "Revision scheduling", "Conceptual clues"],
+        ? ["Méthode de travail", "Plan de révision", "Indices conceptuels"]
+        : ["Study method", "Revision plan", "Conceptual clues"],
       suggestedQuestions: lang === 'fr'
-        ? [
-            "Comment mémoriser les formules et dates clés ?",
-            "Aide-moi à comprendre la méthodologie d'analyse de texte",
-            "Comment organiser ma semaine avant un examen ?",
-          ]
-        : [
-            "How can I memorize core formulas and key dates?",
-            "Help me understand the textual analysis methodology",
-            "How should I structure my study week before exams?",
-          ],
+        ? activePersona.quickPromptsFr.slice(0, 3)
+        : activePersona.quickPromptsEn.slice(0, 3),
     },
   ]);
 
@@ -63,6 +192,23 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
     currentDocument?.subject || (documents[0]?.subject ?? (lang === 'fr' ? 'Général' : 'General'))
   );
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Switch persona reset
+  const handleSelectPersona = (persona: CoachPersona) => {
+    setActivePersonaId(persona.id);
+    setMessages([
+      {
+        id: `welcome-${persona.id}-${Date.now()}`,
+        sender: 'coach',
+        text: lang === 'fr' ? persona.greetingFr : persona.greetingEn,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        hints: lang === 'fr'
+          ? ["Spécialité " + persona.nameFr, "Problématique", "Méthodologie"]
+          : ["Specialty " + persona.nameEn, "Thesis statement", "Methodology"],
+        suggestedQuestions: lang === 'fr' ? persona.quickPromptsFr.slice(0, 3) : persona.quickPromptsEn.slice(0, 3),
+      }
+    ]);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -130,17 +276,21 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
     }
   };
 
-  const quickPrompts = lang === 'fr' ? [
-    "Aide-moi à structurer mon plan de révision",
-    "Quelle est la méthode pour analyser une citation ?",
-    "Donne-moi un indice pour retenir ce chapitre",
-    "Comment gérer mon temps pendant l'épreuve ?",
-  ] : [
-    "Help me structure my revision schedule",
-    "What is the method to analyze a quote?",
-    "Give me a conceptual clue for this topic",
-    "How to manage my time during the exam?",
-  ];
+  useEffect(() => {
+    if (isOpen) {
+      const savedPrompt = sessionStorage.getItem('socratic_initial_prompt');
+      if (savedPrompt) {
+        sessionStorage.removeItem('socratic_initial_prompt');
+        setTimeout(() => {
+          handleSendMessage(savedPrompt);
+        }, 150);
+      }
+    }
+  }, [isOpen]);
+
+  const quickPrompts = lang === 'fr' 
+    ? activePersona.quickPromptsFr 
+    : activePersona.quickPromptsEn;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
@@ -186,6 +336,30 @@ export const SocraticCoachModal: React.FC<SocraticCoachModalProps> = ({
                 : "The coach will not give direct answers to tests. It guides you step-by-step with hints so you build your own understanding."}
             </span>
           </div>
+        </div>
+
+        {/* Coach Personas Selector Bar */}
+        <div className="px-3 py-2 bg-slate-100/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1 shrink-0">
+            {lang === 'fr' ? 'Coachs :' : 'Coaches:'}
+          </span>
+          {COACH_PERSONAS.map((persona) => {
+            const isSelected = persona.id === activePersonaId;
+            return (
+              <button
+                key={persona.id}
+                onClick={() => handleSelectPersona(persona)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-xs ring-1 ring-indigo-400'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <span className="text-sm">{persona.icon}</span>
+                <span className="whitespace-nowrap">{lang === 'fr' ? persona.nameFr : persona.nameEn}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Messages List */}

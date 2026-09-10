@@ -1,46 +1,92 @@
 {
   "entities": {
     "User": {
-      "path": "users/{userId}",
-      "fields": {
-        "email": { "type": "string" },
-        "displayName": { "type": "string" },
-        "photoURL": { "type": "string" },
-        "createdAt": { "type": "string" }
-      }
+      "title": "User",
+      "description": "User profile containing authentication and contact details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user identifier" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name of the user" },
+        "photoURL": { "type": "string", "description": "Avatar URL" },
+        "lastLoginAt": { "type": "string", "description": "Last sign-in timestamp" }
+      },
+      "required": ["uid", "email"]
     },
     "Document": {
-      "path": "users/{userId}/documents/{docId}",
-      "fields": {
-        "title": { "type": "string" },
-        "subject": { "type": "string" },
-        "content": { "type": "string" },
-        "summary": { "type": "string" }
-      }
+      "title": "Document",
+      "description": "Academic school document, chapter, or summary",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique document ID" },
+        "title": { "type": "string", "description": "Title of the lesson or textbook chapter" },
+        "subject": { "type": "string", "description": "Academic subject" },
+        "gradeLevel": { "type": "string", "description": "Target grade level" },
+        "content": { "type": "string", "description": "Document content or notes" },
+        "summary": { "type": "string", "description": "Structured AI summary" },
+        "syncedAt": { "type": "string", "description": "Timestamp when synced" },
+        "lastTransferredFrom": { "type": "string", "description": "Source device (mobile/pc)" }
+      },
+      "required": ["id", "title"]
     },
     "Flashcard": {
-      "path": "users/{userId}/flashcards/{cardId}",
-      "fields": {
-        "question": { "type": "string" },
-        "answer": { "type": "string" }
-      }
+      "title": "Flashcard",
+      "description": "Spaced repetition revision flashcard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique card identifier" },
+        "question": { "type": "string", "description": "Flashcard front prompt" },
+        "answer": { "type": "string", "description": "Flashcard reverse answer" },
+        "subject": { "type": "string", "description": "Academic subject" },
+        "difficulty": { "type": "string", "description": "Difficulty level rating" },
+        "syncedAt": { "type": "string", "description": "Timestamp when synced" }
+      },
+      "required": ["id", "question", "answer"]
     },
     "Transfer": {
-      "path": "users/{userId}/transfers/{transferId}",
-      "fields": {
-        "docId": { "type": "string" },
-        "docTitle": { "type": "string" },
-        "source": { "type": "string" },
-        "timestamp": { "type": "string" }
-      }
+      "title": "Transfer",
+      "description": "Cross-device notification transfer payload",
+      "type": "object",
+      "properties": {
+        "docId": { "type": "string", "description": "ID of the transferred document" },
+        "docTitle": { "type": "string", "description": "Title of the transferred document" },
+        "source": { "type": "string", "description": "Source device identifier" },
+        "timestamp": { "type": "string", "description": "Transfer timestamp" }
+      },
+      "required": ["docId", "docTitle", "source"]
     },
     "Pairing": {
-      "path": "pairings/{code}",
-      "fields": {
-        "userId": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "expiresAt": { "type": "string" }
-      }
+      "title": "Pairing",
+      "description": "Temporary 6-digit sync pairing code",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Linked user ID" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "expiresAt": { "type": "string", "description": "Expiration timestamp" }
+      },
+      "required": ["userId", "createdAt", "expiresAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Root user profile document"
+    },
+    "/users/{userId}/documents/{docId}": {
+      "schema": "Document",
+      "description": "User academic study notes and curriculum documents"
+    },
+    "/users/{userId}/flashcards/{cardId}": {
+      "schema": "Flashcard",
+      "description": "User revision flashcards"
+    },
+    "/users/{userId}/transfers/{transferId}": {
+      "schema": "Transfer",
+      "description": "Real-time cross-device push notifications"
+    },
+    "/pairings/{code}": {
+      "schema": "Pairing",
+      "description": "Temporary device pairing tokens"
     }
   }
 }

@@ -1,51 +1,70 @@
-import React, { useState, useEffect, useMemo, startTransition } from 'react';
+import React, { useState, useEffect, useMemo, startTransition, lazy, Suspense } from 'react';
 import { SchoolDocument, BlocknoteGuide, AppLanguage, UIPreferences, AppTheme, MenuPosition, CustomTag, StudyProgressBackup } from './types';
 import { INITIAL_SCHOOL_DOCUMENTS } from './data/seedDocuments';
 import { Sidebar, NavTabType } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { fetchWithRetry } from './lib/api-utils';
 
-import { DashboardOverview } from './components/DashboardOverview';
-import { DocumentListView } from './components/DocumentListView';
-import { AiSearchView } from './components/AiSearchView';
-import { ResumerView } from './components/ResumerView';
-import { BlocknoteView } from './components/BlocknoteView';
-import { FamousQuotesView } from './components/FamousQuotesView';
-import { DatabaseManagerView } from './components/DatabaseManagerView';
-import { FlashcardsView } from './components/FlashcardsView';
-import { QuizView } from './components/QuizView';
-import { BilingualLearningView } from './components/BilingualLearningView';
-import { SchoolBooksLibraryView } from './components/SchoolBooksLibraryView';
+// Lazy loaded views
+const DashboardOverview = lazy(() => import('./components/DashboardOverview').then(m => ({ default: m.DashboardOverview || m.default })));
+const DocumentListView = lazy(() => import('./components/DocumentListView').then(m => ({ default: m.DocumentListView })));
+const AiSearchView = lazy(() => import('./components/AiSearchView').then(m => ({ default: m.AiSearchView })));
+const ResumerView = lazy(() => import('./components/ResumerView').then(m => ({ default: m.ResumerView })));
+const BlocknoteView = lazy(() => import('./components/BlocknoteView').then(m => ({ default: m.BlocknoteView })));
+const FamousQuotesView = lazy(() => import('./components/FamousQuotesView').then(m => ({ default: m.FamousQuotesView })));
+const DatabaseManagerView = lazy(() => import('./components/DatabaseManagerView').then(m => ({ default: m.DatabaseManagerView })));
+const FlashcardsView = lazy(() => import('./components/FlashcardsView').then(m => ({ default: m.FlashcardsView })));
+const QuizView = lazy(() => import('./components/QuizView').then(m => ({ default: m.QuizView })));
+const BilingualLearningView = lazy(() => import('./components/BilingualLearningView').then(m => ({ default: m.BilingualLearningView })));
+const SchoolBooksLibraryView = lazy(() => import('./components/SchoolBooksLibraryView').then(m => ({ default: m.SchoolBooksLibraryView })));
+const EnglishCourseView = lazy(() => import('./components/EnglishCourseView').then(m => ({ default: m.EnglishCourseView })));
+const SpanishCourseView = lazy(() => import('./components/SpanishCourseView').then(m => ({ default: m.SpanishCourseView })));
+const GermanCourseView = lazy(() => import('./components/GermanCourseView').then(m => ({ default: m.GermanCourseView })));
+const ClassicalLanguagesView = lazy(() => import('./components/ClassicalLanguagesView').then(m => ({ default: m.ClassicalLanguagesView })));
+const TutorialPageView = lazy(() => import('./components/TutorialPageView').then(m => ({ default: m.TutorialPageView })));
+const NoteTakingTipsPageView = lazy(() => import('./components/NoteTakingTipsPageView').then(m => ({ default: m.NoteTakingTipsPageView })));
+const PrivacyPolicyPageView = lazy(() => import('./components/PrivacyPolicyPageView').then(m => ({ default: m.PrivacyPolicyPageView })));
+const FullScreenCommandDeckModal = lazy(() => import('./components/FullScreenCommandDeckModal').then(m => ({ default: m.FullScreenCommandDeckModal })));
 
+// Lazy loaded modals
+const NoteEditorModal = lazy(() => import('./components/NoteEditorModal').then(m => ({ default: m.NoteEditorModal })));
+const PdfUploadModal = lazy(() => import('./components/PdfUploadModal').then(m => ({ default: m.PdfUploadModal })));
+const TutorialModal = lazy(() => import('./components/TutorialModal').then(m => ({ default: m.TutorialModal })));
+const LocalStorageBrowserModal = lazy(() => import('./components/LocalStorageBrowserModal').then(m => ({ default: m.LocalStorageBrowserModal })));
+const EducationalVideosModal = lazy(() => import('./components/EducationalVideosModal').then(m => ({ default: m.EducationalVideosModal })));
+const NoteTakingTipsModal = lazy(() => import('./components/NoteTakingTipsModal').then(m => ({ default: m.NoteTakingTipsModal })));
+const StudyPlaylistsModal = lazy(() => import('./components/StudyPlaylistsModal').then(m => ({ default: m.StudyPlaylistsModal })));
+const QuoteLoadingModal = lazy(() => import('./components/QuoteLoadingModal').then(m => ({ default: m.QuoteLoadingModal })));
+const ThemePreferencesModal = lazy(() => import('./components/ThemePreferencesModal').then(m => ({ default: m.ThemePreferencesModal })));
+const SocraticCoachModal = lazy(() => import('./components/SocraticCoachModal').then(m => ({ default: m.SocraticCoachModal })));
+const BackupProgressModal = lazy(() => import('./components/BackupProgressModal').then(m => ({ default: m.BackupProgressModal })));
+const PhotoNotesScannerModal = lazy(() => import('./components/PhotoNotesScannerModal').then(m => ({ default: m.PhotoNotesScannerModal })));
+const AuthSyncModal = lazy(() => import('./components/AuthSyncModal').then(m => ({ default: m.AuthSyncModal })));
+const KeyboardShortcutsModal = lazy(() => import('./components/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })));
+const PdfAnnotationModal = lazy(() => import('./components/PdfAnnotationModal').then(m => ({ default: m.PdfAnnotationModal })));
+const PresentationModeModal = lazy(() => import('./components/PresentationModeModal').then(m => ({ default: m.PresentationModeModal })));
+const WelcomeOnboardingModal = lazy(() => import('./components/WelcomeOnboardingModal').then(m => ({ default: m.WelcomeOnboardingModal })));
+const OneDriveSyncModal = lazy(() => import('./components/OneDriveSyncModal').then(m => ({ default: m.OneDriveSyncModal })));
+const GoogleWorkspaceModal = lazy(() => import('./components/GoogleWorkspaceModal').then(m => ({ default: m.GoogleWorkspaceModal })));
+const GoogleDriveBrowser = lazy(() => import('./components/GoogleDriveBrowser').then(m => ({ default: m.GoogleDriveBrowser })));
+const PrivacyPolicyModal = lazy(() => import('./components/PrivacyPolicyModal').then(m => ({ default: m.PrivacyPolicyModal })));
+const InstallGuideModal = lazy(() => import('./components/InstallGuideModal').then(m => ({ default: m.InstallGuideModal })));
+const NotionSubjectWorkspaceModal = lazy(() => import('./components/NotionSubjectWorkspaceModal').then(m => ({ default: m.NotionSubjectWorkspaceModal })));
+const CreditsModal = lazy(() => import('./components/CreditsModal').then(m => ({ default: m.CreditsModal || m.default })));
+const OfflineSyncManager = lazy(() => import('./components/OfflineSyncManager').then(m => ({ default: m.OfflineSyncManager })));
+import { NotionSubjectKey } from './components/NotionSubjectWorkspaceModal';
 
-import { NoteEditorModal } from './components/NoteEditorModal';
-import { PdfUploadModal } from './components/PdfUploadModal';
-import { TutorialModal } from './components/TutorialModal';
-import { LocalStorageBrowserModal } from './components/LocalStorageBrowserModal';
-import { EducationalVideosModal } from './components/EducationalVideosModal';
-import { NoteTakingTipsModal } from './components/NoteTakingTipsModal';
-import { StudyPlaylistsModal } from './components/StudyPlaylistsModal';
-import { QuoteLoadingModal } from './components/QuoteLoadingModal';
-import { ThemePreferencesModal } from './components/ThemePreferencesModal';
-import { SocraticCoachModal } from './components/SocraticCoachModal';
-import { BackupProgressModal } from './components/BackupProgressModal';
-import { PhotoNotesScannerModal } from './components/PhotoNotesScannerModal';
-import { AuthSyncModal } from './components/AuthSyncModal';
-import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
-import { PdfAnnotationModal } from './components/PdfAnnotationModal';
-import { PresentationModeModal } from './components/PresentationModeModal';
-import { WelcomeOnboardingModal } from './components/WelcomeOnboardingModal';
-import { OneDriveSyncModal } from './components/OneDriveSyncModal';
-import { GoogleWorkspaceModal } from './components/GoogleWorkspaceModal';
-import { GoogleDriveBrowser } from './components/GoogleDriveBrowser';
-import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
-import { InstallGuideModal } from './components/InstallGuideModal';
-import { InstallAppBanner } from './components/InstallAppBanner';
-import { AppUpdateManager } from './components/AppUpdateManager';
-import { OfflineIndicator } from './components/OfflineIndicator';
+const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })));
+const AppUpdateManager = lazy(() => import('./components/AppUpdateManager').then(m => ({ default: m.AppUpdateManager })));
+const OfflineIndicator = lazy(() => import('./components/OfflineIndicator').then(m => ({ default: m.OfflineIndicator })));
+
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { DesktopLayoutWrapper } from './components/DesktopLayoutWrapper';
+import { PcWorkstationPillBanner } from './components/PcWorkstationPillBanner';
+import { LockInWorkstationHub } from './components/LockInWorkstationHub';
 import { offlineStorageService } from './services/offlineStorageService';
+import { isTauri, showWindow } from './lib/tauri-bridge';
+import { useTauriDesktopWorkstation } from './hooks/useTauriDesktopWorkstation';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   onAuthChange, 
@@ -60,7 +79,12 @@ export default function App() {
   const [documents, setDocuments] = useState<SchoolDocument[]>([]);
   const [isUsingOfflineDB, setIsUsingOfflineDB] = useState<boolean>(false);
 
-  // Initialize activeTab by checking localStorage session and defaulting to 'dashboard' if none is found
+  // Automatic Tauri Desktop environment detector & Hardcore Onyx Workstation Mode hook
+  const { isTauriEnvironment, isWorkstationMode, toggleWorkstationMode } = useTauriDesktopWorkstation({
+    autoEnableOnTauri: true,
+  });
+
+  // Deterministic initial state for zero-warning React hydration
   const [activeTab, setActiveTab] = useState<NavTabType>('dashboard');
   
   // Persist activeTab whenever it changes
@@ -78,24 +102,32 @@ export default function App() {
   const [activeSubjectFilter, setActiveSubjectFilter] = useState<string>('all');
 
   // Custom Tags for document organization
-  const [customTags, setCustomTags] = useState<CustomTag[]>(() => {
-    try {
-      const raw = localStorage.getItem('degreelocker_custom_tags');
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Error loading custom tags from localStorage', e);
-    }
-    return [
-      { id: 'tag-bac', name: 'Bac2025', color: 'indigo' },
-      { id: 'tag-exam', name: 'Examen', color: 'rose' },
-      { id: 'tag-formules', name: 'Formules', color: 'emerald' },
-      { id: 'tag-cours', name: 'CoursImportant', color: 'amber' },
-    ];
-  });
+  const [customTags, setCustomTags] = useState<CustomTag[]>([
+    { id: 'tag-bac', name: 'Bac2025', color: 'indigo' },
+    { id: 'tag-exam', name: 'Examen', color: 'rose' },
+    { id: 'tag-formules', name: 'Formules', color: 'emerald' },
+    { id: 'tag-cours', name: 'CoursImportant', color: 'amber' },
+  ]);
 
-  // Cross-device live transfer notifications
+  // Study activity tracking for genuine streak calculation
+  const [activityDates, setActivityDates] = useState<string[]>([]);
+
+  // Cross-device live transfer notifications & In-App Notification Toast Fallback
   const [deviceToast, setDeviceToast] = useState<{ message: string; docId?: string } | null>(null);
   const [apiErrorToast, setApiErrorToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleInAppNotification = (e: any) => {
+      const { title, body } = e.detail || {};
+      if (title || body) {
+        setDeviceToast({
+          message: `${title ? title + ' : ' : ''}${body || ''}`,
+        });
+      }
+    };
+    window.addEventListener('inAppNotificationToast', handleInAppNotification);
+    return () => window.removeEventListener('inAppNotificationToast', handleInAppNotification);
+  }, []);
 
   // Whenever selected document changes, persist its ID to localStorage
   useEffect(() => {
@@ -109,7 +141,7 @@ export default function App() {
     }
   }, [selectedDocForBlocknote, selectedDocForSummary]);
   
-  // UI Preferences state (Theme, Menu position, Collapse, Language)
+  // UI Preferences state (Theme, Menu position, Collapse, Language) - hydrated in Stage 2
   const [preferences, setPreferences] = useState<UIPreferences>({
     theme: 'light',
     menuPosition: 'left',
@@ -143,60 +175,319 @@ export default function App() {
   const [quotesInitialSubcategory, setQuotesInitialSubcategory] = useState<'all' | 'dolfius_4_maximes' | 'image_maximes'>('all');
   const [isGoogleDriveBrowserOpen, setIsGoogleDriveBrowserOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false);
   const [presentationDoc, setPresentationDoc] = useState<SchoolDocument | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(() => {
-    try {
-      return !localStorage.getItem('degreelocker_welcomed');
-    } catch {
-      return true;
-    }
-  });
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(false);
   const [isQuoteLoadingOpen, setIsQuoteLoadingOpen] = useState(false);
   const [quoteLoadingTitle, setQuoteLoadingTitle] = useState<string | undefined>(undefined);
   const [quoteLoadingSubtitle, setQuoteLoadingSubtitle] = useState<string | undefined>(undefined);
   const [lang, setLang] = useState<AppLanguage>('fr');
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isFullScreenMenuOpen, setIsFullScreenMenuOpen] = useState(false);
+  const [appKeyboardLayout, setAppKeyboardLayout] = useState<'azerty' | 'qwerty'>('azerty');
+  const [isNotionWorkspaceOpen, setIsNotionWorkspaceOpen] = useState(false);
+  const [selectedNotionSubject, setSelectedNotionSubject] = useState<NotionSubjectKey>('espagnol');
+  const [isSplashDismissed, setIsSplashDismissed] = useState<boolean>(false);
 
   // PWA Service Worker & Install Prompt state
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState<boolean>(false);
   const [isInstallGuideOpen, setIsInstallGuideOpen] = useState<boolean>(false);
+  const [isSyncManagerOpen, setIsSyncManagerOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    // Dismiss HTML launch splash loader immediately on React mount
-    if (typeof (window as any).dismissSplashLoader === 'function') {
-      (window as any).dismissSplashLoader();
-    } else {
-      const splashLoader = document.getElementById('app-splash-loader');
-      if (splashLoader) {
-        splashLoader.style.opacity = '0';
-        splashLoader.style.transition = 'opacity 0.12s ease-out';
-        setTimeout(() => splashLoader.remove(), 120);
-      }
-    }
-
-    if ('serviceWorker' in navigator && !('__TAURI__' in window)) {
-      navigator.serviceWorker.register('/sw.js').then((registration) => {
-        console.log('ServiceWorker registration successful:', registration.scope);
-        registration.onupdatefound = () => {
-          const installingWorker = registration.installing;
-          if (installingWorker) {
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  console.log('New website version available; app updated.');
-                }
-              }
-            };
+  // Memoized splash screen dismissal trigger synchronized with Tauri webview
+  const dismissSplash = useMemo(() => {
+    let dismissed = false;
+    return () => {
+      if (dismissed) return;
+      dismissed = true;
+      requestAnimationFrame(() => {
+        setTimeout(async () => {
+          if (typeof (window as any).setSplashProgress === 'function') {
+            (window as any).setSplashProgress(100, true);
+          } else if (typeof (window as any).dismissSplashLoader === 'function') {
+            (window as any).dismissSplashLoader();
           }
-        };
-      }).catch((err) => {
-        console.log('ServiceWorker registration failed:', err);
+
+          // Tauri Native PC Launcher Synchronization: Smoothly reveal window without micro-stutter
+          if (isTauri()) {
+            try {
+              await showWindow();
+            } catch (err) {
+              // Ignore native window reveal errors
+            }
+          }
+
+          // Set splash as officially dismissed after DOM fade/removal
+          setTimeout(() => {
+            setIsSplashDismissed(true);
+          }, 150);
+        }, 0);
       });
+    };
+  }, []);
+
+  // Orchestrated Staged Loading Engine for extreme startup speed on PC & Mobile
+  const [loadingStage, setLoadingStage] = useState<number>(1);
+
+  // STAGE 1: Instant Layout Mount (0ms) - Handled on initial mount
+  useEffect(() => {
+    // Set splash loader progress to 30% on initial shell paint
+    if (typeof (window as any).setSplashProgress === 'function') {
+      (window as any).setSplashProgress(30);
     }
 
+    // Tauri Native PC Launcher: ensure window is revealed safely if not already shown
+    if (isTauri()) {
+      showWindow().catch(() => {});
+    }
+    
+    // Schedule Stage 2 transition immediately after initial layout commit
+    const scheduleStage2 = () => {
+      requestAnimationFrame(() => {
+        setLoadingStage(2);
+      });
+    };
+
+    scheduleStage2();
+  }, []);
+
+  // STAGE 2: Hydrate Essential Data & Restore Local Workspace (Instant / 0ms)
+  // This consolidates local state parsing and IndexedDB reading so we can dismiss the splash screen instantly
+  useEffect(() => {
+    if (loadingStage !== 2) return;
+
+    if (typeof (window as any).setSplashProgress === 'function') {
+      (window as any).setSplashProgress(60);
+    }
+
+    let isMounted = true;
+
+    const runStage2Hydration = async () => {
+      // 1. Instantly parse lightweight synchronous items from localStorage
+      try {
+        const savedTab = localStorage.getItem('degreelocker_active_tab') as NavTabType | null;
+        const validTabs: NavTabType[] = [
+          'dashboard', 'library', 'search', 'resumer', 'blocknote', 
+          'quotes', 'flashcards', 'quiz', 'bilingual', 'database'
+        ];
+        if (savedTab && validTabs.includes(savedTab)) {
+          setActiveTab(savedTab);
+        }
+      } catch (e) {}
+
+      try {
+        const rawPrefs = localStorage.getItem('degreelocker_preferences');
+        if (rawPrefs) {
+          const parsed = JSON.parse(rawPrefs);
+          setPreferences((prev) => ({ ...prev, ...parsed }));
+          if (parsed.language) setLang(parsed.language);
+        }
+      } catch (e) {}
+
+      try {
+        const rawTags = localStorage.getItem('degreelocker_custom_tags');
+        if (rawTags) {
+          setCustomTags(JSON.parse(rawTags));
+        }
+      } catch (e) {
+        console.warn('[Stage 2] Failed loading custom tags:', e);
+      }
+
+      try {
+        const rawDates = localStorage.getItem('degreelocker_activity_dates');
+        if (rawDates) {
+          setActivityDates(JSON.parse(rawDates));
+        }
+      } catch (e) {
+        console.warn('[Stage 2] Failed loading activity dates:', e);
+      }
+
+      try {
+        const welcomed = localStorage.getItem('degreelocker_welcomed');
+        if (!welcomed) {
+          setIsWelcomeModalOpen(true);
+        }
+      } catch (e) {
+        setIsWelcomeModalOpen(true);
+      }
+
+      // 2. Fetch local documents from IndexedDB
+      try {
+        const cachedDocs = await offlineStorageService.getAllDocuments();
+        if (!isMounted) return;
+
+        if (cachedDocs && cachedDocs.length > 0) {
+          const savedDocId = localStorage.getItem('degreelocker_selected_doc_id');
+          const matchedDoc = savedDocId ? cachedDocs.find((d: SchoolDocument) => d.id === savedDocId) : null;
+          const targetDoc = matchedDoc || cachedDocs[0];
+
+          startTransition(() => {
+            setDocuments(cachedDocs);
+            setIsUsingOfflineDB(true);
+            setSelectedDocForBlocknote(targetDoc);
+            setSelectedDocForSummary(targetDoc);
+          });
+        } else {
+          startTransition(() => {
+            setDocuments(INITIAL_SCHOOL_DOCUMENTS);
+            setSelectedDocForBlocknote(INITIAL_SCHOOL_DOCUMENTS[0]);
+            setSelectedDocForSummary(INITIAL_SCHOOL_DOCUMENTS[0]);
+          });
+          await offlineStorageService.saveAllDocuments(INITIAL_SCHOOL_DOCUMENTS);
+        }
+      } catch (err) {
+        if (isMounted) {
+          startTransition(() => {
+            setDocuments(INITIAL_SCHOOL_DOCUMENTS);
+          });
+        }
+      } finally {
+        if (isMounted) {
+          // Immediately hide initial loading and dismiss splash screen!
+          // Essential local data is available, making the app fully interactive.
+          setIsLoadingInitial(false);
+          dismissSplash();
+
+          // Advance to Stage 3 for non-critical network background activities
+          const idleCallback = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 150));
+          idleCallback(() => {
+            setLoadingStage(3);
+          });
+        }
+      }
+    };
+
+    runStage2Hydration();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadingStage, dismissSplash]);
+
+  // STAGE 3: Non-critical Background Network Sync and Service Worker (Idle)
+  useEffect(() => {
+    if (loadingStage !== 3) return;
+
+    let isMounted = true;
+
+    const runStage3 = async () => {
+      // 1. Background-refresh UI preferences from server
+      try {
+        const res = await fetchWithRetry('/api/preferences', {
+          retries: 1,
+          initialDelayMs: 200,
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const prefs = data?.preferences || (data?.theme ? data : null);
+          if (prefs) {
+            setPreferences(prev => {
+              const merged = { ...prev, ...prefs };
+              try {
+                localStorage.setItem('degreelocker_preferences', JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
+            });
+            if (prefs.language) setLang(prefs.language);
+          }
+        }
+      } catch (err: any) {
+        console.info('[Stage 3] Operating with cached UI preferences.');
+      }
+
+      // 2. Register PWA Service Worker
+      if ('serviceWorker' in navigator && !('__TAURI__' in window)) {
+        navigator.serviceWorker.register('/sw.js').then((registration) => {
+          console.log('[Stage 3] ServiceWorker registered:', registration.scope);
+          registration.onupdatefound = () => {
+            const installingWorker = registration.installing;
+            if (installingWorker) {
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('New application update available.');
+                  }
+                }
+              };
+            }
+          };
+        }).catch((err) => {
+          console.log('[Stage 3] ServiceWorker registration failed:', err);
+        });
+      }
+
+      // 3. Silent Background API sync for latest documents
+      try {
+        const res = await fetchWithRetry('/api/documents', {
+          retries: 1,
+          initialDelayMs: 300,
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data && Array.isArray(data.documents) && data.documents.length > 0) {
+            startTransition(() => {
+              setDocuments(data.documents);
+              setIsUsingOfflineDB(false);
+            });
+            await offlineStorageService.saveAllDocuments(data.documents);
+          }
+        }
+      } catch (err) {
+        console.warn('[Stage 3] Silent background sync skipped, operating offline.');
+      }
+
+      // Schedule Stage 4 for non-critical observers and listeners
+      if (isMounted) {
+        const idleCallback = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 250));
+        idleCallback(() => {
+          setLoadingStage(4);
+        });
+      }
+    };
+
+    runStage3();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadingStage]);
+
+  // STAGE 4: Non-critical Auth Observer Setup (Idle / Latency Isolation)
+  // Runs STRICTLY after the splash screen is fully dismissed to prevent main thread blocking
+  useEffect(() => {
+    if (loadingStage < 4 || !isSplashDismissed) return;
+
+    let isMounted = true;
+    let unsubAuth: (() => void) | null = null;
+
+    const idleCallback = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 250));
+
+    const handle = idleCallback(() => {
+      if (!isMounted) return;
+      console.log('[Stage 4] Registering deferred Firebase Auth state observer in idle callback...');
+      unsubAuth = onAuthChange((user) => {
+        if (isMounted) {
+          setCurrentUser(user);
+        }
+      });
+    }, { timeout: 2500 });
+
+    return () => {
+      isMounted = false;
+      if ((window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(handle);
+      } else {
+        clearTimeout(handle);
+      }
+      if (unsubAuth) unsubAuth();
+    };
+  }, [loadingStage, isSplashDismissed]);
+
+  // PWA & Installation Prompt Event Listeners
+  useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -238,46 +529,7 @@ export default function App() {
     }
   };
 
-  // Firebase auth state observer
-  useEffect(() => {
-    const unsubscribe = onAuthChange((user) => {
-      setCurrentUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
 
-  // Study activity tracking for genuine streak calculation
-  const [activityDates, setActivityDates] = useState<string[]>([]);
-
-  // Async initialization for heavy operations
-  useEffect(() => {
-    const initializeAppData = async () => {
-      // 1. Restore activeTab
-      try {
-        const savedTab = localStorage.getItem('degreelocker_active_tab') as NavTabType | null;
-        const validTabs: NavTabType[] = [
-          'dashboard', 'library', 'search', 'resumer', 'blocknote', 
-          'quotes', 'flashcards', 'quiz', 'bilingual', 'database'
-        ];
-        if (savedTab && validTabs.includes(savedTab)) {
-          setActiveTab(savedTab);
-        }
-      } catch (e) {
-        console.warn('Error reading saved activeTab', e);
-      }
-
-      // 2. Restore activity dates
-      try {
-        const raw = localStorage.getItem('degreelocker_activity_dates');
-        if (raw) setActivityDates(JSON.parse(raw));
-      } catch (e) {
-        console.warn('Could not restore activity dates:', e);
-      }
-
-      setIsLoadingInitial(false);
-    };
-    initializeAppData();
-  }, []);
 
   const recordStudyActivity = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -348,7 +600,10 @@ export default function App() {
   // Sync theme changes to html element for global CSS variables
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('dark', 'theme-midnight', 'theme-paper');
+    const body = document.body;
+    root.classList.remove('dark', 'theme-midnight', 'theme-paper', 'pc-hardcore-onyx');
+    if (body) body.classList.remove('pc-hardcore-onyx');
+
     if (preferences.theme === 'dark') {
       root.classList.add('dark');
     } else if (preferences.theme === 'midnight') {
@@ -356,32 +611,12 @@ export default function App() {
       root.classList.add('dark');
     } else if (preferences.theme === 'paper') {
       root.classList.add('theme-paper');
+    } else if (preferences.theme === 'hardcore') {
+      root.classList.add('pc-hardcore-onyx');
+      root.classList.add('dark');
+      if (body) body.classList.add('pc-hardcore-onyx');
     }
   }, [preferences.theme]);
-
-  // Load preferences from server/local on mount
-  useEffect(() => {
-    async function fetchPreferences() {
-      try {
-        const res = await fetchWithRetry('/api/preferences', {
-          retries: 1,
-          initialDelayMs: 200,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const prefs = data?.preferences || (data?.theme ? data : null);
-          if (prefs) {
-            setPreferences(prev => ({ ...prev, ...prefs }));
-            if (prefs.language) setLang(prefs.language);
-          }
-        }
-      } catch (err: any) {
-        // Fallback silently to local state in desktop/offline environment
-        console.info('Operating with local UI preferences (desktop/offline mode).');
-      }
-    }
-    fetchPreferences();
-  }, []);
 
   const savePreferencesToServer = async (newPrefs: UIPreferences) => {
     try {
@@ -402,6 +637,11 @@ export default function App() {
   const handleUpdatePreferences = (updated: Partial<UIPreferences>) => {
     setPreferences((prev) => {
       const next = { ...prev, ...updated, updatedAt: new Date().toISOString() };
+      try {
+        localStorage.setItem('degreelocker_preferences', JSON.stringify(next));
+      } catch (e) {
+        console.warn('Could not cache preferences locally', e);
+      }
       savePreferencesToServer(next);
       if (updated.language) {
         setLang(updated.language);
@@ -421,6 +661,11 @@ export default function App() {
     setPreferences((prev) => {
       const nextTheme: AppTheme = prev.theme === 'light' || prev.theme === 'paper' ? 'dark' : 'light';
       const updated = { ...prev, theme: nextTheme, updatedAt: new Date().toISOString() };
+      try {
+        localStorage.setItem('degreelocker_preferences', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Could not cache preferences locally', e);
+      }
       savePreferencesToServer(updated);
       return updated;
     });
@@ -463,6 +708,11 @@ export default function App() {
         setIsAuthModalOpen(false);
         setIsGoogleWorkspaceOpen(false);
         setIsGoogleDriveBrowserOpen(false);
+        setIsFullScreenMenuOpen(false);
+        setIsSidebarOpen(false);
+        setIsPrivacyModalOpen(false);
+        setIsNotionWorkspaceOpen(false);
+        setIsInstallGuideOpen(false);
         return;
       }
 
@@ -546,12 +796,24 @@ export default function App() {
           return;
         }
 
+        // Ctrl+B -> Toggle Sidebar
+        if (e.key === 'b' || e.key === 'B') {
+          e.preventDefault();
+          setIsSidebarOpen((prev) => !prev);
+          return;
+        }
+
         // Ctrl+/ -> Toggle Keyboard Shortcuts Sheet
         if (e.key === '/' || e.key === '?') {
           e.preventDefault();
           setIsKeyboardShortcutsOpen((prev) => !prev);
           return;
         }
+      }
+
+      // Escape -> close sidebar if open
+      if (e.key === 'Escape') {
+        setIsSidebarOpen(false);
       }
     };
 
@@ -574,77 +836,7 @@ export default function App() {
     return map;
   }, [documents]);
 
-  // Ultra-fast instant launch: load IndexedDB / Seed data immediately (0ms), then sync with server in background
-  useEffect(() => {
-    let isMounted = true;
 
-    async function initializeFastLaunch() {
-      // 1. Instant local restore from IndexedDB or seed data
-      try {
-        const cachedDocs = await offlineStorageService.getAllDocuments();
-        if (!isMounted) return;
-        if (cachedDocs && cachedDocs.length > 0) {
-          const savedDocId = localStorage.getItem('degreelocker_selected_doc_id');
-          const matchedDoc = savedDocId ? cachedDocs.find((d: SchoolDocument) => d.id === savedDocId) : null;
-          const targetDoc = matchedDoc || cachedDocs[0];
-
-          startTransition(() => {
-            setDocuments(cachedDocs);
-            setIsUsingOfflineDB(true);
-            setSelectedDocForBlocknote(targetDoc);
-            setSelectedDocForSummary(targetDoc);
-          });
-        } else {
-          startTransition(() => {
-            setDocuments(INITIAL_SCHOOL_DOCUMENTS);
-            setSelectedDocForBlocknote(INITIAL_SCHOOL_DOCUMENTS[0]);
-            setSelectedDocForSummary(INITIAL_SCHOOL_DOCUMENTS[0]);
-          });
-          await offlineStorageService.saveAllDocuments(INITIAL_SCHOOL_DOCUMENTS);
-        }
-      } catch (idbErr) {
-        if (isMounted) {
-          startTransition(() => {
-            setDocuments(INITIAL_SCHOOL_DOCUMENTS);
-          });
-        }
-      } finally {
-        if (isMounted) {
-          startTransition(() => {
-            setIsLoadingInitial(false);
-          });
-          if (typeof (window as any).dismissSplashLoader === 'function') {
-            (window as any).dismissSplashLoader();
-          }
-        }
-      }
-
-      // 2. Silent non-blocking background fetch from server
-      try {
-        const res = await fetchWithRetry('/api/documents', {
-          retries: 1,
-          initialDelayMs: 300,
-        });
-        if (res.ok && isMounted) {
-          const data = await res.json();
-          if (data && Array.isArray(data.documents) && data.documents.length > 0) {
-            startTransition(() => {
-              setDocuments(data.documents);
-              setIsUsingOfflineDB(false);
-            });
-            await offlineStorageService.saveAllDocuments(data.documents);
-          }
-        }
-      } catch (err) {
-        console.warn('[Offline Engine] Background server sync skipped, continuing with local documents.');
-      }
-    }
-
-    initializeFastLaunch();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Auto-persist documents state to IndexedDB on every local mutation
   useEffect(() => {
@@ -732,52 +924,71 @@ export default function App() {
   };
 
   // Real-time synchronization when user is logged in & direct push transfer listener
+  // Defers Firestore listeners until AFTER splash is fully dismissed to guarantee zero main-thread contention
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || loadingStage < 4 || !isSplashDismissed) return;
 
-    // 1. Listen for new documents or updates from other devices (e.g. mobile photo scan)
-    const unsubCloud = subscribeToCloudDocuments(currentUser.uid, (cloudDocs) => {
-      if (cloudDocs && cloudDocs.length > 0) {
-        setDocuments((prev) => {
-          const prevMap = new Map(prev.map((d) => [d.id, d]));
-          let hasChanges = false;
-          for (const cd of cloudDocs) {
-            if (!prevMap.has(cd.id)) {
-              prevMap.set(cd.id, cd);
-              hasChanges = true;
+    let isMounted = true;
+    let unsubCloud: (() => void) | null = null;
+    let unsubTransfers: (() => void) | null = null;
+
+    const idleCallback = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 350));
+
+    const handle = idleCallback(() => {
+      if (!isMounted) return;
+
+      console.log('[Firestore] Registering deferred cloud and device transfer observers in idle callback...');
+
+      // 1. Listen for new documents or updates from other devices (e.g. mobile photo scan)
+      unsubCloud = subscribeToCloudDocuments(currentUser.uid, (cloudDocs) => {
+        if (cloudDocs && cloudDocs.length > 0) {
+          setDocuments((prev) => {
+            const prevMap = new Map(prev.map((d) => [d.id, d]));
+            let hasChanges = false;
+            for (const cd of cloudDocs) {
+              if (!prevMap.has(cd.id)) {
+                prevMap.set(cd.id, cd);
+                hasChanges = true;
+              }
             }
-          }
-          if (hasChanges) {
-            const merged = Array.from(prevMap.values());
-            fetch('/api/documents/import', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ documents: merged }),
-            }).catch(console.warn);
-            return merged;
-          }
-          return prev;
-        });
-      }
-    });
+            if (hasChanges) {
+              const merged = Array.from(prevMap.values());
+              fetch('/api/documents/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documents: merged }),
+              }).catch(console.warn);
+              return merged;
+            }
+            return prev;
+          });
+        }
+      });
 
-    // 2. Listen for direct transfers pushed from smartphone
-    const unsubTransfers = subscribeToDeviceTransfers(currentUser.uid, (transfer: DeviceTransferRecord) => {
-      if (transfer.source === 'mobile') {
-        setDeviceToast({
-          message: lang === 'fr' 
-            ? `📱 Document reçu en direct depuis votre smartphone : "${transfer.docTitle}"`
-            : `📱 Document received live from mobile: "${transfer.docTitle}"`,
-          docId: transfer.docId,
-        });
-      }
+      // 2. Listen for direct transfers pushed from smartphone
+      unsubTransfers = subscribeToDeviceTransfers(currentUser.uid, (transfer: DeviceTransferRecord) => {
+        if (transfer.source === 'mobile') {
+          setDeviceToast({
+            message: lang === 'fr' 
+              ? `📱 Document reçu en direct depuis votre smartphone : "${transfer.docTitle}"`
+              : `📱 Document received live from mobile: "${transfer.docTitle}"`,
+            docId: transfer.docId,
+          });
+        }
+      });
     });
 
     return () => {
-      unsubCloud();
-      unsubTransfers();
+      isMounted = false;
+      if ((window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(handle);
+      } else {
+        clearTimeout(handle);
+      }
+      if (unsubCloud) unsubCloud();
+      if (unsubTransfers) unsubTransfers();
     };
-  }, [currentUser?.uid, lang]);
+  }, [currentUser?.uid, lang, loadingStage, isSplashDismissed]);
 
   // Send single document to smartphone via cloud
   const handleSendToPhone = async (doc: SchoolDocument) => {
@@ -934,6 +1145,62 @@ export default function App() {
     }
   };
 
+  const handleTogglePinDocument = async (id: string) => {
+    let targetDoc: SchoolDocument | undefined;
+    setDocuments((prev) =>
+      prev.map((d) => {
+        if (d.id === id) {
+          targetDoc = { ...d, isPinned: !d.isPinned, updatedAt: new Date().toISOString() };
+          return targetDoc;
+        }
+        return d;
+      })
+    );
+    if (targetDoc) {
+      try {
+        await offlineStorageService.saveDocument(targetDoc);
+        await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(targetDoc),
+        });
+      } catch (err) {
+        console.warn('[Offline Engine] Pin update queued:', err);
+      }
+    }
+  };
+
+  const handleQuickCreatePinnedNote = async (newNoteData: Partial<SchoolDocument>) => {
+    const newDoc: SchoolDocument = {
+      id: `pinned-${Date.now()}`,
+      title: newNoteData.title || (lang === 'fr' ? 'Note Rapide Épinglée' : 'Pinned Quick Note'),
+      subject: newNoteData.subject || (lang === 'fr' ? 'Général' : 'General'),
+      date: new Date().toISOString().split('T')[0],
+      type: 'typed_note',
+      tags: newNoteData.tags || ['Bac 2025', 'Épinglé'],
+      content: newNoteData.content || '',
+      summary: newNoteData.summary || newNoteData.content?.slice(0, 160) || '',
+      isPinned: true,
+      pinColor: newNoteData.pinColor || 'amber',
+      pinPriority: newNoteData.pinPriority || 'high',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setDocuments((prev) => [newDoc, ...prev]);
+    try {
+      await offlineStorageService.saveDocument(newDoc);
+      await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDoc),
+      });
+    } catch (e) {
+      console.warn('Quick pinned note saved locally', e);
+    }
+    return newDoc;
+  };
+
   const handleUpdateDocumentSummary = async (docId: string, summary: string, keyPoints: string[]) => {
     const doc = documents.find((d) => d.id === docId);
     if (!doc) return;
@@ -1041,12 +1308,17 @@ export default function App() {
           onOpenVideos={() => handleOpenVideos()}
           onOpenTips={() => setIsTipsOpen(true)}
           onOpenPreferences={() => setIsPreferencesOpen(true)}
+          onOpenCredits={() => setIsCreditsOpen(true)}
           onOpenBackup={() => setIsBackupOpen(true)}
           onOpenCoach={() => setIsCoachOpen(true)}
           onOpenKeyboardShortcuts={() => setIsKeyboardShortcutsOpen(true)}
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
           onOpenGoogleWorkspace={() => setIsGoogleWorkspaceOpen(true)}
           onOpenPrivacy={() => setIsPrivacyModalOpen(true)}
+          onOpenNotionExercises={(subj) => {
+            if (subj) setSelectedNotionSubject(subj as any);
+            setIsNotionWorkspaceOpen(true);
+          }}
           onFilterSubject={(subj) => {
             setActiveSubjectFilter(subj);
             setActiveTab('library');
@@ -1059,8 +1331,8 @@ export default function App() {
           collapsed={preferences.isSidebarCollapsed}
           onToggleCollapsed={() => handleUpdatePreferences({ isSidebarCollapsed: !preferences.isSidebarCollapsed })}
           activeTheme={preferences.theme}
-          isMobileOpen={isMobileMenuOpen}
-          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
           onInstallPwa={handleInstallPwa}
           isPwaInstalled={isPwaInstalled}
           onSelectQuotesCategory={(cat, subcat = 'all') => {
@@ -1092,6 +1364,9 @@ export default function App() {
           onOpenGoogleWorkspace={() => setIsGoogleWorkspaceOpen(true)}
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
           onOpenKeyboardShortcuts={() => setIsKeyboardShortcutsOpen(true)}
+          onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
+          onOpenSyncManager={() => setIsSyncManagerOpen(true)}
+          isPwaInstalled={isPwaInstalled}
           currentUser={currentUser}
           lang={lang}
           onToggleLang={handleToggleLang}
@@ -1101,10 +1376,9 @@ export default function App() {
           menuPosition={preferences.menuPosition}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          isSidebarCollapsed={preferences.isSidebarCollapsed}
-          onToggleSidebar={() => handleUpdatePreferences({ isSidebarCollapsed: !preferences.isSidebarCollapsed })}
+          isSidebarOpen={isSidebarOpen || isFullScreenMenuOpen}
+          onToggleSidebar={() => setIsFullScreenMenuOpen(true)}
           activeTheme={preferences.theme}
-          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         />
 
         {/* Workspace Body - Spacious and responsive */}
@@ -1165,12 +1439,53 @@ export default function App() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0, y: 10, scale: 0.998, filter: 'blur(2px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -8, scale: 0.998, filter: 'blur(2px)' }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             >
-              {/* Tab 1: Dashboard Overview */}
+              <Suspense fallback={
+                <div className="p-6 max-w-7xl mx-auto space-y-6 animate-pulse">
+                  <div className="h-10 bg-slate-200 dark:bg-slate-800/60 rounded-2xl w-1/3"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="h-32 bg-slate-200 dark:bg-slate-800/50 rounded-2xl"></div>
+                    <div className="h-32 bg-slate-200 dark:bg-slate-800/50 rounded-2xl"></div>
+                    <div className="h-32 bg-slate-200 dark:bg-slate-800/50 rounded-2xl"></div>
+                  </div>
+                  <div className="h-64 bg-slate-200 dark:bg-slate-800/40 rounded-3xl"></div>
+                </div>
+              }>
+                {/* DegreeUnlocker PC Workstation Segmented Pill Hero (Exclusive for PC Desktop mode) */}
+                {(isWorkstationMode || isTauriEnvironment || preferences.theme === 'hardcore') && (
+                  <>
+                    <LockInWorkstationHub
+                      lang={lang}
+                      activeSubject={activeSubjectFilter || (documents[0]?.subject)}
+                      onLaunchRevision={() => {
+                        if (activeTab !== 'flashcards') {
+                          setActiveTab('flashcards');
+                        }
+                      }}
+                      onNewNote={() => {
+                        setDocumentToEdit(null);
+                        setIsNoteEditorOpen(true);
+                      }}
+                    />
+                    <PcWorkstationPillBanner
+                      activeTab={activeTab}
+                      selectedSubject={activeSubjectFilter || (documents[0]?.subject)}
+                      lang={lang}
+                      onLaunchRevision={() => {
+                        if (activeTab !== 'flashcards') {
+                          setActiveTab('flashcards');
+                        }
+                      }}
+                      onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
+                    />
+                  </>
+                )}
+
+                {/* Tab 1: Dashboard Overview */}
               {activeTab === 'dashboard' && (
                 <DashboardOverview
                   documents={documents}
@@ -1188,9 +1503,14 @@ export default function App() {
                   onOpenBackup={() => setIsBackupOpen(true)}
                   onOpenTutorial={() => setIsTutorialOpen(true)}
                   onOpenTips={() => setIsTipsOpen(true)}
+                  onOpenCredits={() => setIsCreditsOpen(true)}
                   onFilterSubject={(subj) => {
                     setActiveSubjectFilter(subj);
                   }}
+                  onTogglePinDoc={handleTogglePinDocument}
+                  onQuickCreatePinnedNote={handleQuickCreatePinnedNote}
+                  onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
+                  onOpenSyncManager={() => setIsSyncManagerOpen(true)}
                   lang={lang}
                   activeTheme={preferences.theme}
                 />
@@ -1337,6 +1657,7 @@ export default function App() {
                   }}
                   initialCategory={quotesInitialCategory}
                   initialSubcategory={quotesInitialSubcategory}
+                  onOpenCoach={() => setIsCoachOpen(true)}
                 />
               )}
 
@@ -1389,8 +1710,152 @@ export default function App() {
                   lang={lang}
                 />
               )}
-            </motion.div>
-          </AnimatePresence>
+
+              {/* Tab 10.5: English Course (Priority Words & Notes) */}
+              {activeTab === 'english' && (
+                <EnglishCourseView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onOpenInBlocknote={(title, subject, content) => {
+                    const tempDoc: SchoolDocument = {
+                      id: 'anglais_' + Date.now(),
+                      title: title,
+                      subject: subject,
+                      type: 'typed_note',
+                      content: content,
+                      summary: `Fiche de cours Anglais: ${title}`,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      tags: ['Anglais', 'Vocabulaire', subject]
+                    };
+                    setSelectedDocForBlocknote(tempDoc);
+                    setActiveTab('blocknote');
+                  }}
+                  onCreateFlashcard={(question, answer, subject) => {
+                    setActiveTab('flashcards');
+                  }}
+                />
+              )}
+
+              {/* Tab 11: Comprehensive Spanish Course */}
+              {activeTab === 'spanish' && (
+                <SpanishCourseView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onOpenInBlocknote={(title, subject, content) => {
+                    const tempDoc: SchoolDocument = {
+                      id: 'espagnol_' + Date.now(),
+                      title: title,
+                      subject: subject,
+                      type: 'typed_note',
+                      content: content,
+                      summary: `Fiche de cours Espagnol: ${title}`,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      tags: ['Espagnol', subject]
+                    };
+                    setSelectedDocForBlocknote(tempDoc);
+                    setActiveTab('blocknote');
+                  }}
+                />
+              )}
+
+              {/* Tab 12: Comprehensive German Course */}
+              {activeTab === 'german' && (
+                <GermanCourseView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onOpenInBlocknote={(title, subject, content) => {
+                    const tempDoc: SchoolDocument = {
+                      id: 'allemand_' + Date.now(),
+                      title: title,
+                      subject: subject,
+                      type: 'typed_note',
+                      content: content,
+                      summary: `Fiche de cours Allemand: ${title}`,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      tags: ['Allemand', subject]
+                    };
+                    setSelectedDocForBlocknote(tempDoc);
+                    setActiveTab('blocknote');
+                  }}
+                />
+              )}
+
+              {/* Tab 13: Classical Languages (Latin & Greek) */}
+              {activeTab === 'latin' && (
+                <ClassicalLanguagesView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onOpenInBlocknote={(title, subject, content) => {
+                    const tempDoc: SchoolDocument = {
+                      id: 'latin_' + Date.now(),
+                      title: title,
+                      subject: subject,
+                      type: 'typed_note',
+                      content: content,
+                      summary: `Fiche de cours Humanités Anciennes: ${title}`,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      tags: ['Latin', 'Grec', 'Humanités', subject]
+                    };
+                    setSelectedDocForBlocknote(tempDoc);
+                    setActiveTab('blocknote');
+                  }}
+                />
+              )}
+
+              {/* Tab 14: Interactive Tutorial & Quickstart Guide */}
+              {activeTab === 'tutorial' && (
+                <TutorialPageView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onBack={() => setActiveTab('dashboard')}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                />
+              )}
+
+              {/* Tab 15: Methodology & Note-Taking Best Practices Guide */}
+              {activeTab === 'tips' && (
+                <NoteTakingTipsPageView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onOpenDocInBlocknote={(title, subject, content) => {
+                    const tempDoc: SchoolDocument = {
+                      id: 'methodo_' + Date.now(),
+                      title: title,
+                      subject: subject,
+                      type: 'typed_note',
+                      content: content,
+                      summary: `Guide Méthodologique de Prise de Notes: ${title}`,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      tags: ['Méthodologie', 'Prise de Notes', subject]
+                    };
+                    setSelectedDocForBlocknote(tempDoc);
+                    setActiveTab('blocknote');
+                  }}
+                />
+              )}
+
+              {/* Tab 16: Privacy Policy & Data Sovereignty Page */}
+              {activeTab === 'privacy' && (
+                <PrivacyPolicyPageView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onBack={() => setActiveTab('dashboard')}
+                />
+              )}
+            </Suspense>
+          </motion.div>
+        </AnimatePresence>
         </main>
 
         {/* Mobile Persistent Bottom Navigation Bar */}
@@ -1399,342 +1864,483 @@ export default function App() {
           setActiveTab={setActiveTab}
           onOpenUpload={() => setIsPdfUploadOpen(true)}
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
-          onOpenMenu={() => setIsMobileMenuOpen(true)}
+          onOpenMenu={() => setIsFullScreenMenuOpen(true)}
           lang={lang}
           activeTheme={preferences.theme}
         />
       </div>
 
-      {/* Socratic AI Study Coach Modal (Anti-Triche & Method) */}
-      <SocraticCoachModal
-        isOpen={isCoachOpen}
-        onClose={() => setIsCoachOpen(false)}
-        documents={documents}
-        currentDocument={selectedDocForBlocknote || selectedDocForSummary}
-        lang={lang}
-      />
+      <Suspense fallback={null}>
+        {/* Socratic AI Study Coach Modal (Anti-Triche & Method) */}
+        {isCoachOpen && (
+          <SocraticCoachModal
+            isOpen={isCoachOpen}
+            onClose={() => setIsCoachOpen(false)}
+            documents={documents}
+            currentDocument={selectedDocForBlocknote || selectedDocForSummary}
+            lang={lang}
+          />
+        )}
 
-      {/* Photo Notes Scanner Modal (Camera / Phone Snap to Google Docs) */}
-      <PhotoNotesScannerModal
-        isOpen={isPhotoScannerOpen}
-        onClose={() => setIsPhotoScannerOpen(false)}
-        currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onDocumentCreated={(newDoc) => {
-          setDocuments((prev) => [newDoc, ...prev]);
-          setSelectedDocForBlocknote(newDoc);
-          setSelectedDocForSummary(newDoc);
-          recordStudyActivity();
-          if (currentUser) {
-            syncDocumentsToFirestore(currentUser.uid, [newDoc, ...documents]);
-          }
-        }}
-        lang={lang}
-      />
+        {/* Photo Notes Scanner Modal (Camera / Phone Snap to Google Docs) */}
+        {isPhotoScannerOpen && (
+          <PhotoNotesScannerModal
+            isOpen={isPhotoScannerOpen}
+            onClose={() => setIsPhotoScannerOpen(false)}
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onDocumentCreated={(newDoc) => {
+              setDocuments((prev) => [newDoc, ...prev]);
+              setSelectedDocForBlocknote(newDoc);
+              setSelectedDocForSummary(newDoc);
+              recordStudyActivity();
+              if (currentUser) {
+                syncDocumentsToFirestore(currentUser.uid, [newDoc, ...documents]);
+              }
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* Account & Cross-Device Cloud Sync Modal (Phone ↔ Computer via Firebase) */}
-      <AuthSyncModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        currentUser={currentUser}
-        onUserChanged={(user) => setCurrentUser(user)}
-        localDocs={documents}
-        onMergeCloudDocs={(mergedDocs) => {
-          setDocuments(mergedDocs);
-          if (mergedDocs.length > 0) {
-            setSelectedDocForBlocknote(mergedDocs[0]);
-            setSelectedDocForSummary(mergedDocs[0]);
-          }
-        }}
-        lang={lang}
-      />
+        {/* Account & Cross-Device Cloud Sync Modal (Phone ↔ Computer via Firebase) */}
+        {isAuthModalOpen && (
+          <AuthSyncModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            currentUser={currentUser}
+            onUserChanged={(user) => setCurrentUser(user)}
+            localDocs={documents}
+            onMergeCloudDocs={(mergedDocs) => {
+              setDocuments(mergedDocs);
+              if (mergedDocs.length > 0) {
+                setSelectedDocForBlocknote(mergedDocs[0]);
+                setSelectedDocForSummary(mergedDocs[0]);
+              }
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* Theme & Layout Preferences Manager Modal */}
-      <ThemePreferencesModal
-        isOpen={isPreferencesOpen}
-        onClose={() => setIsPreferencesOpen(false)}
-        preferences={preferences}
-        onUpdatePreferences={handleUpdatePreferences}
-        onOpenBackup={() => setIsBackupOpen(true)}
-        lang={lang}
-      />
+        {/* Theme & Layout Preferences Manager Modal */}
+        {isPreferencesOpen && (
+          <ThemePreferencesModal
+            isOpen={isPreferencesOpen}
+            onClose={() => setIsPreferencesOpen(false)}
+            preferences={preferences}
+            onUpdatePreferences={handleUpdatePreferences}
+            onOpenBackup={() => setIsBackupOpen(true)}
+            lang={lang}
+          />
+        )}
 
-      {/* Study Progress Backup & Restore Modal (.JSON) */}
-      <BackupProgressModal
-        isOpen={isBackupOpen}
-        onClose={() => setIsBackupOpen(false)}
-        documents={documents}
-        streakDays={realStreakDays}
-        preferences={preferences}
-        onRestoreSuccess={handleRestoreBackup}
-        lang={lang}
-      />
+        {/* Study Progress Backup & Restore Modal (.JSON) */}
+        {isBackupOpen && (
+          <BackupProgressModal
+            isOpen={isBackupOpen}
+            onClose={() => setIsBackupOpen(false)}
+            documents={documents}
+            currentStreak={realStreakDays}
+            activityDates={activityDates}
+            preferences={preferences}
+            onRestoreData={handleRestoreBackup}
+            lang={lang}
+          />
+        )}
 
-      {/* Quote Loading Modal (used during heavy loading/processing) */}
-      <QuoteLoadingModal
-        isOpen={isQuoteLoadingOpen}
-        title={quoteLoadingTitle}
-        subtitle={quoteLoadingSubtitle}
-        lang={lang}
-      />
+        {/* Quote Loading Modal (used during heavy loading/processing) */}
+        {isQuoteLoadingOpen && (
+          <QuoteLoadingModal
+            isOpen={isQuoteLoadingOpen}
+            title={quoteLoadingTitle}
+            subtitle={quoteLoadingSubtitle}
+            lang={lang}
+          />
+        )}
 
-      {/* Study Playlists & Offline Ambient Sound Synthesizer Modal */}
-      <StudyPlaylistsModal
-        isOpen={isPlaylistsOpen}
-        onClose={() => setIsPlaylistsOpen(false)}
-        lang={lang}
-      />
+        {/* Study Playlists & Offline Ambient Sound Synthesizer Modal */}
+        {isPlaylistsOpen && (
+          <StudyPlaylistsModal
+            isOpen={isPlaylistsOpen}
+            onClose={() => setIsPlaylistsOpen(false)}
+            lang={lang}
+          />
+        )}
 
-      {/* Note Editor Modal */}
-      <NoteEditorModal
-        isOpen={isNoteEditorOpen}
-        onClose={() => {
-          setIsNoteEditorOpen(false);
-          setDocumentToEdit(null);
-        }}
-        documentToEdit={documentToEdit}
-        onSave={handleSaveDocument}
-        lang={lang}
-      />
+        {/* Note Editor Modal */}
+        {isNoteEditorOpen && (
+          <NoteEditorModal
+            isOpen={isNoteEditorOpen}
+            onClose={() => {
+              setIsNoteEditorOpen(false);
+              setDocumentToEdit(null);
+            }}
+            documentToEdit={documentToEdit}
+            onSave={handleSaveDocument}
+            lang={lang}
+          />
+        )}
 
-      {/* PDF / Word / Excel / Google Doc Upload Modal */}
-      <PdfUploadModal
-        isOpen={isPdfUploadOpen}
-        onClose={() => setIsPdfUploadOpen(false)}
-        onPdfProcessed={handlePdfProcessed}
-        lang={lang}
-      />
+        {/* PDF / Word / Excel / Google Doc Upload Modal */}
+        {isPdfUploadOpen && (
+          <PdfUploadModal
+            isOpen={isPdfUploadOpen}
+            onClose={() => setIsPdfUploadOpen(false)}
+            onPdfProcessed={handlePdfProcessed}
+            lang={lang}
+          />
+        )}
 
-      {/* Tutorial & Walkthrough Modal */}
-      <TutorialModal
-        isOpen={isTutorialOpen}
-        onClose={() => setIsTutorialOpen(false)}
-        onOpenSampleBlocknote={() => {
-          setIsTutorialOpen(false);
-          setActiveTab('blocknote');
-        }}
-        lang={lang}
-      />
+        {/* Tutorial & Walkthrough Modal */}
+        {isTutorialOpen && (
+          <TutorialModal
+            isOpen={isTutorialOpen}
+            onClose={() => setIsTutorialOpen(false)}
+            onOpenSampleBlocknote={() => {
+              setIsTutorialOpen(false);
+              setActiveTab('blocknote');
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* Local Storage File Browser Modal */}
-      <LocalStorageBrowserModal
-        isOpen={isLocalStorageOpen}
-        onClose={() => setIsLocalStorageOpen(false)}
-        onSelectDocument={(doc) => {
-          setSelectedDocForBlocknote(doc);
-          setActiveTab('blocknote');
-          setIsLocalStorageOpen(false);
-        }}
-        lang={lang}
-      />
+        {/* Local Storage File Browser Modal */}
+        {isLocalStorageOpen && (
+          <LocalStorageBrowserModal
+            isOpen={isLocalStorageOpen}
+            onClose={() => setIsLocalStorageOpen(false)}
+            onSelectDoc={(docId) => {
+              const found = documents.find((d) => d.id === docId);
+              if (found) setSelectedDocForBlocknote(found);
+              setActiveTab('blocknote');
+              setIsLocalStorageOpen(false);
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* Educational Videos Modal */}
-      <EducationalVideosModal
-        isOpen={isVideosOpen}
-        onClose={() => setIsVideosOpen(false)}
-        initialSubject={selectedSubjectForVideos}
-        lang={lang}
-      />
+        {/* Educational Videos Modal */}
+        {isVideosOpen && (
+          <EducationalVideosModal
+            isOpen={isVideosOpen}
+            onClose={() => setIsVideosOpen(false)}
+            initialSubject={selectedSubjectForVideos}
+            lang={lang}
+          />
+        )}
 
-      {/* Note Taking Tips Modal */}
-      <NoteTakingTipsModal
-        isOpen={isTipsOpen}
-        onClose={() => setIsTipsOpen(false)}
-        lang={lang}
-        onOpenBlocknoteSample={() => {
-          setIsTipsOpen(false);
-          setActiveTab('blocknote');
-        }}
-      />
+        {/* Note Taking Tips Modal */}
+        {isTipsOpen && (
+          <NoteTakingTipsModal
+            isOpen={isTipsOpen}
+            onClose={() => setIsTipsOpen(false)}
+            lang={lang}
+          />
+        )}
 
-      {/* Global Keyboard Shortcuts Manager Modal */}
-      <KeyboardShortcutsModal
-        isOpen={isKeyboardShortcutsOpen}
-        onClose={() => setIsKeyboardShortcutsOpen(false)}
-        lang={lang}
-        onTriggerSearch={() => setActiveTab('search')}
-        onTriggerNewNote={() => {
-          setDocumentToEdit(null);
-          setIsNoteEditorOpen(true);
-        }}
-        onTriggerUploadPdf={() => setIsPdfUploadOpen(true)}
-        onTriggerBlocknote={() => setActiveTab('blocknote')}
-        onTriggerFlashcards={() => setActiveTab('flashcards')}
-        onTriggerQuiz={() => setActiveTab('quiz')}
-        onTriggerLibrary={() => setActiveTab('library')}
-        onTriggerDashboard={() => setActiveTab('dashboard')}
-        onTriggerThemeToggle={handleToggleQuickTheme}
-        onTriggerCoach={() => setIsCoachOpen(true)}
-        onTriggerPhotoScanner={() => setIsPhotoScannerOpen(true)}
-      />
+        {/* Global Keyboard Shortcuts Manager Modal */}
+        {isKeyboardShortcutsOpen && (
+          <KeyboardShortcutsModal
+            isOpen={isKeyboardShortcutsOpen}
+            onClose={() => setIsKeyboardShortcutsOpen(false)}
+            lang={lang}
+            onTriggerSearch={() => setActiveTab('search')}
+            onTriggerNewNote={() => {
+              setDocumentToEdit(null);
+              setIsNoteEditorOpen(true);
+            }}
+            onTriggerUploadPdf={() => setIsPdfUploadOpen(true)}
+            onTriggerBlocknote={() => setActiveTab('blocknote')}
+            onTriggerFlashcards={() => setActiveTab('flashcards')}
+            onTriggerQuiz={() => setActiveTab('quiz')}
+            onTriggerLibrary={() => setActiveTab('library')}
+            onTriggerDashboard={() => setActiveTab('dashboard')}
+            onTriggerThemeToggle={handleToggleQuickTheme}
+            onTriggerCoach={() => setIsCoachOpen(true)}
+            onTriggerPhotoScanner={() => setIsPhotoScannerOpen(true)}
+          />
+        )}
 
-      {/* PDF Drawing & Highlighting Annotation Modal */}
-      <PdfAnnotationModal
-        isOpen={isAnnotationOpen}
-        onClose={() => {
-          setIsAnnotationOpen(false);
-          setAnnotatingDoc(null);
-        }}
-        document={annotatingDoc}
-        onSaveAnnotations={(docId, annotations) => {
-          setDocuments((prev) =>
-            prev.map((doc) =>
-              doc.id === docId ? { ...doc, annotations } : doc
-            )
-          );
-          if (annotatingDoc && annotatingDoc.id === docId) {
-            setAnnotatingDoc((prev) => (prev ? { ...prev, annotations } : null));
-          }
-        }}
-        lang={lang}
-      />
+        {/* PDF Drawing & Highlighting Annotation Modal */}
+        {isAnnotationOpen && (
+          <PdfAnnotationModal
+            isOpen={isAnnotationOpen}
+            onClose={() => {
+              setIsAnnotationOpen(false);
+              setAnnotatingDoc(null);
+            }}
+            document={annotatingDoc}
+            onSaveAnnotations={(docId, annotations) => {
+              setDocuments((prev) =>
+                prev.map((doc) =>
+                  doc.id === docId ? { ...doc, annotations } : doc
+                )
+              );
+              if (annotatingDoc && annotatingDoc.id === docId) {
+                setAnnotatingDoc((prev) => (prev ? { ...prev, annotations } : null));
+              }
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* Full-Screen Presentation Mode Modal */}
-      <PresentationModeModal
-        isOpen={isPresentationOpen}
-        onClose={() => {
-          setIsPresentationOpen(false);
-          setPresentationDoc(null);
-        }}
-        documents={documents}
-        initialDocument={presentationDoc || selectedDocForSummary || documents[0]}
-        lang={lang}
-      />
+        {/* Full-Screen Presentation Mode Modal */}
+        {isPresentationOpen && (
+          <PresentationModeModal
+            isOpen={isPresentationOpen}
+            onClose={() => {
+              setIsPresentationOpen(false);
+              setPresentationDoc(null);
+            }}
+            documents={documents}
+            initialDocument={presentationDoc || selectedDocForSummary || documents[0]}
+            lang={lang}
+          />
+        )}
 
-      {/* Welcome Onboarding Modal for First Visit / Google Account Sync */}
-      <WelcomeOnboardingModal
-        isOpen={isWelcomeModalOpen}
-        onClose={() => setIsWelcomeModalOpen(false)}
-        onUserConnected={(user) => setCurrentUser(user)}
-        lang={lang}
-      />
+        {/* Welcome Onboarding Modal for First Visit / Google Account Sync */}
+        {isWelcomeModalOpen && (
+          <WelcomeOnboardingModal
+            isOpen={isWelcomeModalOpen}
+            onClose={() => setIsWelcomeModalOpen(false)}
+            onUserConnected={(user) => setCurrentUser(user)}
+            lang={lang}
+          />
+        )}
 
-      {/* Google Workspace Hub (Drive, Docs, Tasks) */}
-      <GoogleWorkspaceModal
-        isOpen={isGoogleWorkspaceOpen}
-        onClose={() => setIsGoogleWorkspaceOpen(false)}
-        currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        documents={documents}
-        onOpenDriveBrowser={() => setIsGoogleDriveBrowserOpen(true)}
-        onImportDoc={async (newDoc) => {
-          const created: SchoolDocument = {
-            id: newDoc.id || `doc-${Date.now()}`,
-            title: newDoc.title || 'Fichier Google Drive',
-            subject: newDoc.subject || 'Google Drive',
-            summary: newDoc.summary || '',
-            content: newDoc.content || '',
-            type: newDoc.type || 'google_doc',
-            tags: newDoc.tags || ['Google Drive', 'Workspace'],
-            date: newDoc.date || new Date().toISOString().split('T')[0],
-            pdfDataUrl: newDoc.pdfDataUrl,
-            fileName: newDoc.fileName,
-            fileSize: newDoc.fileSize,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          setDocuments((prev) => [created, ...prev]);
-          setSelectedDocForBlocknote(created);
-          setSelectedDocForSummary(created);
+        {/* Google Workspace Hub (Drive, Docs, Tasks) */}
+        {isGoogleWorkspaceOpen && (
+          <GoogleWorkspaceModal
+            isOpen={isGoogleWorkspaceOpen}
+            onClose={() => setIsGoogleWorkspaceOpen(false)}
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            documents={documents}
+            onOpenDriveBrowser={() => setIsGoogleDriveBrowserOpen(true)}
+            onImportDoc={async (newDoc) => {
+              const created: SchoolDocument = {
+                id: newDoc.id || `doc-${Date.now()}`,
+                title: newDoc.title || 'Fichier Google Drive',
+                subject: newDoc.subject || 'Google Drive',
+                summary: newDoc.summary || '',
+                content: newDoc.content || '',
+                type: newDoc.type || 'google_doc',
+                tags: newDoc.tags || ['Google Drive', 'Workspace'],
+                date: newDoc.date || new Date().toISOString().split('T')[0],
+                pdfDataUrl: newDoc.pdfDataUrl,
+                fileName: newDoc.fileName,
+                fileSize: newDoc.fileSize,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              setDocuments((prev) => [created, ...prev]);
+              setSelectedDocForBlocknote(created);
+              setSelectedDocForSummary(created);
 
-          try {
-            await fetch('/api/documents', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(created),
-            });
-          } catch (e) {
-            console.warn('Could not persist imported Drive document to server API:', e);
-          }
-        }}
-        lang={lang}
-      />
+              try {
+                await fetch('/api/documents', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(created),
+                });
+              } catch (e) {
+                console.warn('Could not persist imported Drive document to server API:', e);
+              }
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* Dedicated Google Drive Browser & Ingestion Modal */}
-      <GoogleDriveBrowser
-        isOpen={isGoogleDriveBrowserOpen}
-        onClose={() => setIsGoogleDriveBrowserOpen(false)}
-        currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onIngestDocument={async (newDoc) => {
-          const created: SchoolDocument = {
-            id: newDoc.id || `doc-${Date.now()}`,
-            title: newDoc.title || 'Fichier Google Drive',
-            subject: newDoc.subject || 'Google Drive',
-            summary: newDoc.summary || '',
-            content: newDoc.content || '',
-            type: newDoc.type || 'google_doc',
-            tags: newDoc.tags || ['Google Drive', 'Workspace'],
-            date: newDoc.date || new Date().toISOString().split('T')[0],
-            pdfDataUrl: newDoc.pdfDataUrl,
-            fileName: newDoc.fileName,
-            fileSize: newDoc.fileSize,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          setDocuments((prev) => [created, ...prev]);
-          setSelectedDocForBlocknote(created);
-          setSelectedDocForSummary(created);
+        {/* Dedicated Google Drive Browser & Ingestion Modal */}
+        {isGoogleDriveBrowserOpen && (
+          <GoogleDriveBrowser
+            isOpen={isGoogleDriveBrowserOpen}
+            onClose={() => setIsGoogleDriveBrowserOpen(false)}
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onIngestDocument={async (newDoc) => {
+              const created: SchoolDocument = {
+                id: newDoc.id || `doc-${Date.now()}`,
+                title: newDoc.title || 'Fichier Google Drive',
+                subject: newDoc.subject || 'Google Drive',
+                summary: newDoc.summary || '',
+                content: newDoc.content || '',
+                type: newDoc.type || 'google_doc',
+                tags: newDoc.tags || ['Google Drive', 'Workspace'],
+                date: newDoc.date || new Date().toISOString().split('T')[0],
+                pdfDataUrl: newDoc.pdfDataUrl,
+                fileName: newDoc.fileName,
+                fileSize: newDoc.fileSize,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              setDocuments((prev) => [created, ...prev]);
+              setSelectedDocForBlocknote(created);
+              setSelectedDocForSummary(created);
 
-          try {
-            await fetch('/api/documents', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(created),
-            });
-          } catch (e) {
-            console.warn('Could not persist ingested Drive document to server API:', e);
-          }
-        }}
-        lang={lang}
-      />
+              try {
+                await fetch('/api/documents', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(created),
+                });
+              } catch (e) {
+                console.warn('Could not persist ingested Drive document to server API:', e);
+              }
+            }}
+            lang={lang}
+          />
+        )}
 
-      {/* OneDrive & Cloud Sync Modal */}
-      <OneDriveSyncModal
-        isOpen={isOneDriveOpen}
-        onClose={() => setIsOneDriveOpen(false)}
-        currentUser={currentUser}
-        documents={documents}
-        onSyncComplete={(synced) => setDocuments(synced)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        lang={lang}
-      />
+        {/* OneDrive & Cloud Sync Modal */}
+        {isOneDriveOpen && (
+          <OneDriveSyncModal
+            isOpen={isOneDriveOpen}
+            onClose={() => setIsOneDriveOpen(false)}
+            currentUser={currentUser}
+            documents={documents}
+            onSyncComplete={(synced) => setDocuments(synced)}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            lang={lang}
+          />
+        )}
 
-      {/* Global PWA Auto-Update Manager Toast */}
-      <AppUpdateManager lang={lang} />
+        {/* Global PWA Auto-Update Manager Toast */}
+        <AppUpdateManager lang={lang} />
 
-      {/* Public Privacy Policy & Google Compliance Modal */}
-      <PrivacyPolicyModal
-        isOpen={isPrivacyModalOpen}
-        onClose={() => setIsPrivacyModalOpen(false)}
-        lang={lang}
-      />
+        {/* Public Privacy Policy & Google Compliance Modal */}
+        {isPrivacyModalOpen && (
+          <PrivacyPolicyModal
+            isOpen={isPrivacyModalOpen}
+            onClose={() => setIsPrivacyModalOpen(false)}
+            lang={lang}
+          />
+        )}
 
-      {/* PWA Installation & Launch Guide Modal */}
-      <InstallGuideModal
-        isOpen={isInstallGuideOpen}
-        onClose={() => setIsInstallGuideOpen(false)}
-        lang={lang}
-        deferredPrompt={deferredPrompt}
-        onInstallSuccess={() => setIsPwaInstalled(true)}
-        isPwaInstalled={isPwaInstalled}
-      />
+        {/* Credits & Show Creators Modal */}
+        {isCreditsOpen && (
+          <CreditsModal
+            isOpen={isCreditsOpen}
+            onClose={() => setIsCreditsOpen(false)}
+            lang={lang}
+          />
+        )}
+
+        {/* PWA Installation & Launch Guide Modal */}
+        {isInstallGuideOpen && (
+          <InstallGuideModal
+            isOpen={isInstallGuideOpen}
+            onClose={() => setIsInstallGuideOpen(false)}
+            lang={lang}
+            deferredPrompt={deferredPrompt}
+            onInstallSuccess={() => setIsPwaInstalled(true)}
+            isPwaInstalled={isPwaInstalled}
+          />
+        )}
+
+        {/* Offline Sync Manager & Cloud Queue Panel */}
+        {isSyncManagerOpen && (
+          <OfflineSyncManager
+            isOpen={isSyncManagerOpen}
+            onClose={() => setIsSyncManagerOpen(false)}
+            lang={lang}
+            activeTheme={preferences.theme}
+          />
+        )}
+
+        {/* Independent Notion Subject Workspace Modal */}
+        {isNotionWorkspaceOpen && (
+          <NotionSubjectWorkspaceModal
+            isOpen={isNotionWorkspaceOpen}
+            onClose={() => setIsNotionWorkspaceOpen(false)}
+            initialSubject={selectedNotionSubject}
+            lang={lang}
+            activeTheme={preferences.theme}
+            onOpenInBlocknote={(title, subject, content) => {
+              const newDoc: SchoolDocument = {
+                id: `doc-${Date.now()}`,
+                title,
+                subject,
+                summary: '',
+                content,
+                type: 'blocknote',
+                tags: [subject, 'Notion', 'Exercices'],
+                date: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              setDocuments((prev) => [newDoc, ...prev]);
+              setSelectedDocForBlocknote(newDoc);
+              setSelectedDocForSummary(newDoc);
+              setActiveTab('blocknote');
+              setIsNotionWorkspaceOpen(false);
+            }}
+            onNavigateTab={(tab) => {
+              setActiveTab(tab);
+              setIsNotionWorkspaceOpen(false);
+            }}
+          />
+        )}
+
+        {/* Grand Full-Screen Command Deck Overlay (Triggered by Hamburger / Menu Button) */}
+        {isFullScreenMenuOpen && (
+          <FullScreenCommandDeckModal
+            isOpen={isFullScreenMenuOpen}
+            onClose={() => setIsFullScreenMenuOpen(false)}
+            activeTab={activeTab}
+            onSelectTab={(tab) => {
+              setActiveTab(tab);
+              setIsFullScreenMenuOpen(false);
+            }}
+            onOpenNotionWorkspace={(subjKey) => {
+              if (subjKey) setSelectedNotionSubject(subjKey as any);
+              setIsNotionWorkspaceOpen(true);
+              setIsFullScreenMenuOpen(false);
+            }}
+            onOpenNewNote={() => {
+              setDocumentToEdit(null);
+              setIsNoteEditorOpen(true);
+              setIsFullScreenMenuOpen(false);
+            }}
+            onOpenUpload={() => {
+              setIsPdfUploadOpen(true);
+              setIsFullScreenMenuOpen(false);
+            }}
+            onOpenSync={() => {
+              setIsAuthModalOpen(true);
+              setIsFullScreenMenuOpen(false);
+            }}
+            lang={lang}
+            activeTheme={preferences.theme}
+            onSelectTheme={(theme) => handleUpdatePreferences({ theme })}
+            keyboardLayout={appKeyboardLayout}
+            onToggleKeyboardLayout={() => setAppKeyboardLayout((prev) => prev === 'azerty' ? 'qwerty' : 'azerty')}
+          />
+        )}
+      </Suspense>
 
       {/* Floating PWA Installation Banner */}
       {deferredPrompt && (
-        <InstallAppBanner
-          deferredPrompt={deferredPrompt}
-          lang={lang}
-          onInstallSuccess={() => {
-            setIsPwaInstalled(true);
-            setDeferredPrompt(null);
-          }}
-          onDismiss={() => setDeferredPrompt(null)}
-        />
+        <Suspense fallback={null}>
+          <InstallAppBanner
+            deferredPrompt={deferredPrompt}
+            lang={lang}
+            onInstallSuccess={() => {
+              setIsPwaInstalled(true);
+              setDeferredPrompt(null);
+            }}
+            onDismiss={() => setDeferredPrompt(null)}
+          />
+        </Suspense>
       )}
 
       {/* Offline & IndexedDB Status Indicator */}
-      <OfflineIndicator lang={lang} isUsingOfflineDB={isUsingOfflineDB} />
+      <Suspense fallback={null}>
+        <OfflineIndicator 
+          lang={lang} 
+          isUsingOfflineDB={isUsingOfflineDB} 
+          onOpenSyncManager={() => setIsSyncManagerOpen(true)}
+        />
+      </Suspense>
       </div>
     </DesktopLayoutWrapper>
   );

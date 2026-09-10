@@ -40,7 +40,9 @@ import {
   PanelLeftOpen,
   Filter,
   X,
-  RefreshCw
+  RefreshCw,
+  CheckSquare,
+  Trophy
 } from 'lucide-react';
 
 interface FamousQuotesViewProps {
@@ -48,6 +50,7 @@ interface FamousQuotesViewProps {
   onOpenDocWithTopic?: (topic: string) => void;
   initialCategory?: string;
   initialSubcategory?: 'all' | 'dolfius_4_maximes' | 'image_maximes';
+  onOpenCoach?: () => void;
 }
 
 const shuffleQuotes = (quotes: FamousQuote[]): FamousQuote[] => {
@@ -75,36 +78,90 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
   onOpenDocWithTopic,
   initialCategory = 'all',
   initialSubcategory = 'all',
+  onOpenCoach,
 }) => {
-  // Randomize initial quotes on each app open / component mount
-  const [allQuotes, setAllQuotes] = useState<FamousQuote[]>(() => shuffleQuotes(MASTER_INITIAL_QUOTES));
+  // Deterministic initial state to prevent any hydration mismatch between SSR/initial render and client
+  const [allQuotes, setAllQuotes] = useState<FamousQuote[]>(MASTER_INITIAL_QUOTES);
   const [isFetchingNew, setIsFetchingNew] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<'all' | 'dolfius_4_maximes' | 'image_maximes'>(initialSubcategory);
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (initialCategory === 'image_maximes' || initialCategory === 'dolfius_4_maximes' || initialCategory === 'philosophy_group') {
+      return 'philosophy_maxims';
+    }
+    return initialCategory;
+  });
+  const [selectedSubcategory, setSelectedSubcategory] = useState<'all' | 'dolfius_4_maximes' | 'image_maximes'>(() => {
+    if (initialCategory === 'image_maximes') return 'image_maximes';
+    if (initialCategory === 'dolfius_4_maximes') return 'dolfius_4_maximes';
+    return initialSubcategory;
+  });
   const [isPhilosophyGroupExpanded, setIsPhilosophyGroupExpanded] = useState<boolean>(true);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
+
+  // Feature 1, 2 & 3 custom states
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [spotlightActionTab, setSpotlightActionTab] = useState<'none' | 'poster' | 'journal'>('none');
+  const [posterTheme, setPosterTheme] = useState<'amber' | 'indigo' | 'emerald' | 'crimson' | 'dark' | 'light'>('amber');
+  const [posterFont, setPosterFont] = useState<'serif' | 'sans' | 'mono'>('serif');
+  const [showWatermark, setShowWatermark] = useState<boolean>(true);
+  const [showPosterTranslation, setShowPosterTranslation] = useState<boolean>(true);
+  
+  const [reflectionText, setReflectionText] = useState<string>('');
+  const [wisdomPoints, setWisdomPoints] = useState<number>(0);
+  const [reflections, setReflections] = useState<Record<string, string[]>>({});
+  const [showReflectionSuccess, setShowReflectionSuccess] = useState<boolean>(false);
   
   // Voice engine state
   const [availableVoices, setAvailableVoices] = useState<VoiceDescriptor[]>([]);
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>(speechEngine.getPreferredVoiceURI() || '');
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [speechRate, setSpeechRate] = useState<number>(0.92);
   const [speechPitch, setSpeechPitch] = useState<number>(1.0);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedPosterType, setCopiedPosterType] = useState<'ascii' | 'html' | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
-  const [featuredQuote, setFeaturedQuote] = useState<FamousQuote>(() => {
-    const randomIndex = Math.floor(Math.random() * MASTER_INITIAL_QUOTES.length);
-    return MASTER_INITIAL_QUOTES[randomIndex] || PHILOSOPHY_AND_FOUR_MAXIMS[0];
-  }); 
-  const [featuredCreatorQuotes, setFeaturedCreatorQuotes] = useState<FamousQuote[]>(() => getRandomTwoDolfius());
+  const [featuredQuote, setFeaturedQuote] = useState<FamousQuote>(PHILOSOPHY_AND_FOUR_MAXIMS[0] || MASTER_INITIAL_QUOTES[0]); 
+  const [featuredCreatorQuotes, setFeaturedCreatorQuotes] = useState<FamousQuote[]>(() => ALL_DOLFIUS_MAXIMS.slice(0, 2));
   const [pinnedIds, setPinnedIds] = useState<string[]>(['quote-dolfius-attitude-complete']);
+
+  // Hydrate client-side state on mount to eliminate any hydration mismatches
+  useEffect(() => {
+    try {
+      const savedPoints = localStorage.getItem('degreelocker_wisdom_points');
+      if (savedPoints) setWisdomPoints(parseInt(savedPoints, 10));
+      const savedReflections = localStorage.getItem('degreelocker_quote_reflections');
+      if (savedReflections) setReflections(JSON.parse(savedReflections));
+    } catch (e) {
+      // ignore
+    }
+
+    // Set preferred voice if available
+    const preferred = speechEngine.getPreferredVoiceURI();
+    if (preferred) setSelectedVoiceURI(preferred);
+
+    // Randomize initial quotes sequence and featured quotes cleanly on client mount
+    setAllQuotes(shuffleQuotes(MASTER_INITIAL_QUOTES));
+    const randomIndex = Math.floor(Math.random() * MASTER_INITIAL_QUOTES.length);
+    setFeaturedQuote(MASTER_INITIAL_QUOTES[randomIndex] || PHILOSOPHY_AND_FOUR_MAXIMS[0]);
+    setFeaturedCreatorQuotes(getRandomTwoDolfius());
+  }, []);
 
   // Sync initialCategory / subcategory if prop changes
   useEffect(() => {
     if (initialCategory && initialCategory !== 'all') {
-      setSelectedCategory(initialCategory);
+      if (initialCategory === 'image_maximes') {
+        setSelectedCategory('philosophy_maxims');
+        setSelectedSubcategory('image_maximes');
+      } else if (initialCategory === 'dolfius_4_maximes') {
+        setSelectedCategory('philosophy_maxims');
+        setSelectedSubcategory('dolfius_4_maximes');
+      } else if (initialCategory === 'philosophy_group') {
+        setSelectedCategory('philosophy_maxims');
+        setSelectedSubcategory('all');
+      } else {
+        setSelectedCategory(initialCategory);
+      }
     }
   }, [initialCategory]);
 
@@ -137,7 +194,7 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
     const fetchNewSessionQuotes = async () => {
       if (sessionStorage.getItem('fetched_session_quotes')) return;
       setIsFetchingNew(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 150));
       
       const newBonusQuotes: FamousQuote[] = [
         {
@@ -255,9 +312,34 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
     allQuotes.filter(q => q.category === 'philosophy_maxims' && q.subcategory === 'image_maximes').length
   , [allQuotes]);
 
-  // Filtered quotes based on search, category and subcategory
+  // Filtered quotes based on search, category, subcategory and tag
   const filteredQuotes = useMemo(() => {
     return allQuotes.filter((q) => {
+      // Tag filter
+      if (selectedTag !== 'all') {
+        const query = selectedTag.toLowerCase();
+        const text = (lang === 'fr' ? q.quoteFr : q.quote).toLowerCase();
+        const author = q.author.toLowerCase();
+        const role = q.role.toLowerCase();
+        const context = (lang === 'fr' ? q.contextFr : q.context).toLowerCase();
+        
+        let matches = text.includes(query) || author.includes(query) || role.includes(query) || context.includes(query);
+        if (query === 'égalité') {
+          matches = matches || text.includes('égal') || text.includes('supérieur') || text.includes('sexe') || text.includes('genre') || text.includes('suprématie');
+        } else if (query === 'couple' || query === 'mariage') {
+          matches = matches || text.includes('mariage') || text.includes('couple') || text.includes('engager') || text.includes('partenaire') || text.includes('valeur');
+        } else if (query === 'moteur') {
+          matches = matches || text.includes('carrosserie') || text.includes('moteur') || text.includes('apparence');
+        } else if (query === 'travail') {
+          matches = matches || text.includes('travail') || text.includes('effort') || text.includes('curiosité');
+        } else if (query === 'réciprocité') {
+          matches = matches || text.includes('récipro') || text.includes('respect') || text.includes('donner');
+        } else if (query === 'résilience') {
+          matches = matches || text.includes('tempête') || text.includes('résilience') || text.includes('force') || text.includes('adversité');
+        }
+        if (!matches) return false;
+      }
+
       // Category filter
       if (selectedCategory !== 'all') {
         if (selectedCategory === 'philosophy_group') {
@@ -271,7 +353,7 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
       // Subcategory filter for philosophy_maxims
       if ((selectedCategory === 'philosophy_maxims' || selectedCategory === 'philosophy_group') && selectedSubcategory !== 'all') {
         if (selectedSubcategory === 'dolfius_4_maximes') {
-          if (!q.author.includes('Dolfius')) return false;
+          if (!(q.author || '').includes('Dolfius')) return false;
         } else if (selectedSubcategory === 'image_maximes') {
           if (q.subcategory !== 'image_maximes') return false;
         }
@@ -279,10 +361,10 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
       // Search filter across text, author, role, context, category and subcategory
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
-        const text = (lang === 'fr' ? q.quoteFr : q.quote).toLowerCase();
-        const author = q.author.toLowerCase();
-        const role = q.role.toLowerCase();
-        const context = (lang === 'fr' ? q.contextFr : q.context).toLowerCase();
+        const text = (lang === 'fr' ? (q.quoteFr || q.quote || '') : (q.quote || q.quoteFr || '')).toLowerCase();
+        const author = (q.author || '').toLowerCase();
+        const role = (q.role || '').toLowerCase();
+        const context = (lang === 'fr' ? (q.contextFr || q.context || '') : (q.context || q.contextFr || '')).toLowerCase();
         const categoryKey = (q.category || '').toLowerCase();
         const subcategoryKey = (q.subcategory || '').toLowerCase();
 
@@ -310,7 +392,7 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
       }
       return true;
     });
-  }, [searchQuery, selectedCategory, selectedSubcategory, lang, allQuotes]);
+  }, [searchQuery, selectedCategory, selectedSubcategory, selectedTag, lang, allQuotes]);
 
   useEffect(() => {
     return () => {
@@ -376,20 +458,88 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
   };
 
   const handleRandomQuote = () => {
-    const randomIndex = Math.floor(Math.random() * FAMOUS_QUOTES.length);
-    setFeaturedQuote(FAMOUS_QUOTES[randomIndex]);
+    const pool = allQuotes.length > 0 ? allQuotes : MASTER_INITIAL_QUOTES;
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    setFeaturedQuote(pool[randomIndex] || pool[0]);
   };
 
   const handleReshuffleQuotes = () => {
     setAllQuotes(prev => shuffleQuotes(prev));
-    const randomIndex = Math.floor(Math.random() * FAMOUS_QUOTES.length);
-    setFeaturedQuote(FAMOUS_QUOTES[randomIndex]);
+    const pool = allQuotes.length > 0 ? allQuotes : MASTER_INITIAL_QUOTES;
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    setFeaturedQuote(pool[randomIndex] || pool[0]);
   };
 
   const togglePin = (id: string) => {
     setPinnedIds((prev) => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
+  };
+
+  const getPosterBgClass = () => {
+    switch (posterTheme) {
+      case 'amber':
+        return 'bg-amber-500 text-amber-950 border-amber-600';
+      case 'indigo':
+        return 'bg-indigo-900 text-indigo-50 border-indigo-950';
+      case 'emerald':
+        return 'bg-emerald-800 text-emerald-50 border-emerald-950';
+      case 'crimson':
+        return 'bg-rose-950 text-rose-50 border-rose-900';
+      case 'dark':
+        return 'bg-slate-950 text-slate-100 border-slate-900';
+      case 'light':
+        return 'bg-orange-50/50 text-amber-950 border-amber-100';
+      default:
+        return 'bg-amber-500 text-amber-950 border-amber-600';
+    }
+  };
+
+  const getPosterFontClass = () => {
+    switch (posterFont) {
+      case 'serif':
+        return 'font-serif';
+      case 'sans':
+        return 'font-sans';
+      case 'mono':
+        return 'font-mono';
+      default:
+        return 'font-serif';
+    }
+  };
+
+  const handleDiscussWithCoach = (q: FamousQuote) => {
+    const quoteText = lang === 'fr' ? q.quoteFr : q.quote;
+    const prompt = lang === 'fr'
+      ? `Aide-moi à analyser socratiquement et philosophiquement cette maxime d'éloquence de ${q.author} (${q.year}) : "${quoteText}". Quelles sont ses implications réelles pour ma vie ou mes études ?`
+      : `Help me philosophically and Socratically analyze this eloquence maxim by ${q.author} (${q.year}): "${quoteText}". What are its practical implications for my life or my studies?`;
+    
+    sessionStorage.setItem('socratic_initial_prompt', prompt);
+    if (onOpenCoach) {
+      onOpenCoach();
+    }
+  };
+
+  const handleSaveReflection = () => {
+    if (!reflectionText.trim()) return;
+    const quoteId = featuredQuote.id;
+    const currentList = reflections[quoteId] || [];
+    const updatedList = [reflectionText.trim(), ...currentList];
+    const updatedReflections = {
+      ...reflections,
+      [quoteId]: updatedList
+    };
+
+    setReflections(updatedReflections);
+    localStorage.setItem('degreelocker_quote_reflections', JSON.stringify(updatedReflections));
+
+    const updatedPoints = wisdomPoints + 15;
+    setWisdomPoints(updatedPoints);
+    localStorage.setItem('degreelocker_wisdom_points', updatedPoints.toString());
+
+    setReflectionText('');
+    setShowReflectionSuccess(true);
+    setTimeout(() => setShowReflectionSuccess(false), 3000);
   };
 
   const getCategoryBadge = (category: FamousQuote['category']) => {
@@ -690,9 +840,330 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                 </>
               )}
             </button>
+
+            {onOpenCoach && (
+              <button
+                onClick={() => handleDiscussWithCoach(featuredQuote)}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
+                title={lang === 'fr' ? 'Lancer un dialogue philosophique et socratique autour de cette maxime' : 'Launch a Socratic dialogue on this quote'}
+              >
+                <Brain className="w-4 h-4 text-emerald-200" />
+                <span>{lang === 'fr' ? 'Discuter avec le Coach' : 'Discuss with Coach'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dynamic Studio Tabs Bar */}
+        <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 font-medium">{lang === 'fr' ? 'Atelier d\'Éloquence :' : 'Eloquence Workshop:'}</span>
+            <button
+              onClick={() => setSpotlightActionTab(spotlightActionTab === 'poster' ? 'none' : 'poster')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                spotlightActionTab === 'poster'
+                  ? 'bg-amber-400 text-slate-950 font-black'
+                  : 'bg-white/10 text-white hover:bg-white/15'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{lang === 'fr' ? 'Générateur d\'Affiche' : 'Poster Generator'}</span>
+            </button>
+
+            <button
+              onClick={() => setSpotlightActionTab(spotlightActionTab === 'journal' ? 'none' : 'journal')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                spotlightActionTab === 'journal'
+                  ? 'bg-indigo-400 text-slate-950 font-black'
+                  : 'bg-white/10 text-white hover:bg-white/15'
+              }`}
+            >
+              <ScrollText className="w-3.5 h-3.5" />
+              <span>{lang === 'fr' ? 'Journal de Réflexion' : 'Reflection Journal'}</span>
+              {(reflections[featuredQuote.id] || []).length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-white text-[9px] font-mono font-bold">
+                  {(reflections[featuredQuote.id] || []).length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-[11px] text-amber-300 font-mono font-bold">
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>{wisdomPoints} {lang === 'fr' ? 'Points de Sagesse' : 'Wisdom Points'}</span>
           </div>
         </div>
       </div>
+
+      {/* Expandable Poster Generator Sub-panel (Feature 1) */}
+      {spotlightActionTab === 'poster' && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-lg space-y-5 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>{lang === 'fr' ? 'Générateur d\'Affiche d\'Éloquence' : 'Eloquence Poster Studio'}</span>
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {lang === 'fr' ? 'Personnalisez le style de la maxime pour vos fiches, fonds d\'écran ou impression.' : 'Customize the visual style of this maxim for wallpaper, revision notes or printing.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setSpotlightActionTab('none')}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              title={lang === 'fr' ? 'Fermer le studio' : 'Close studio'}
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Visual Preview */}
+            <div className="lg:col-span-7 flex items-center justify-center bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <div
+                id="poster-preview-card"
+                className={`w-full max-w-sm rounded-2xl p-6 sm:p-8 border text-center relative overflow-hidden transition-all duration-300 shadow-md ${getPosterBgClass()} ${getPosterFontClass()}`}
+              >
+                {/* Decorative background vectors */}
+                <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl pointer-events-none" />
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-black/10 rounded-full blur-xl pointer-events-none" />
+
+                {/* Optional watermark logo */}
+                {showWatermark && (
+                  <div className="text-[10px] uppercase tracking-widest opacity-35 font-bold mb-6 flex items-center justify-center gap-1">
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>DEGREE UNLOCKER • SAGESSE</span>
+                  </div>
+                )}
+
+                <div className="my-4 space-y-4">
+                  <span className="text-3xl font-serif opacity-30 select-none block text-center">“</span>
+                  <p className="text-base sm:text-lg italic font-semibold leading-relaxed whitespace-pre-line px-2">
+                    {lang === 'fr' ? featuredQuote.quoteFr : featuredQuote.quote}
+                  </p>
+                  {showPosterTranslation && featuredQuote.quoteFr && featuredQuote.quote && (
+                    <p className="text-xs opacity-75 border-t border-current/10 pt-3 italic whitespace-pre-line px-2">
+                      {lang === 'fr' ? featuredQuote.quote : featuredQuote.quoteFr}
+                    </p>
+                  )}
+                  <span className="text-3xl font-serif opacity-30 select-none block text-center">”</span>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-current/10 space-y-0.5">
+                  <h5 className="font-bold text-xs uppercase tracking-wider">{featuredQuote.author}</h5>
+                  <p className="text-[10px] opacity-75">{featuredQuote.role} • {featuredQuote.year}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Controls panel */}
+            <div className="lg:col-span-5 space-y-4 text-xs">
+              {/* Palette */}
+              <div className="space-y-1.5">
+                <span className="font-bold text-slate-700 block">{lang === 'fr' ? 'Thème de couleur :' : 'Color Palette:'}</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'amber', labelFr: 'Ambre Chaud', labelEn: 'Amber Glow' },
+                    { id: 'indigo', labelFr: 'Nuit Cosmique', labelEn: 'Cosmic Night' },
+                    { id: 'emerald', labelFr: 'Émeraude', labelEn: 'Emerald Grove' },
+                    { id: 'crimson', labelFr: 'Solennel', labelEn: 'Crimson Slate' },
+                    { id: 'dark', labelFr: 'Noir Pur', labelEn: 'Obsidian' },
+                    { id: 'light', labelFr: 'Papier Crème', labelEn: 'Parchment' },
+                  ].map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => setPosterTheme(theme.id as any)}
+                      className={`py-2 rounded-lg font-semibold border text-center transition-all cursor-pointer ${
+                        posterTheme === theme.id
+                          ? 'bg-slate-900 text-white border-slate-950 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {lang === 'fr' ? theme.labelFr : theme.labelEn}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fonts */}
+              <div className="space-y-1.5">
+                <span className="font-bold text-slate-700 block">{lang === 'fr' ? 'Typographie :' : 'Font Style:'}</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'serif', label: 'Playfair Serif' },
+                    { id: 'sans', label: 'Jakarta Sans' },
+                    { id: 'mono', label: 'Monospace' },
+                  ].map((font) => (
+                    <button
+                      key={font.id}
+                      onClick={() => setPosterFont(font.id as any)}
+                      className={`py-2 rounded-lg font-semibold border text-center transition-all cursor-pointer ${
+                        posterFont === font.id
+                          ? 'bg-slate-900 text-white border-slate-950'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {font.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={showWatermark}
+                    onChange={(e) => setShowWatermark(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>{lang === 'fr' ? 'Afficher le filigrane de l\'app' : 'Show application watermark'}</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={showPosterTranslation}
+                    onChange={(e) => setShowPosterTranslation(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>{lang === 'fr' ? 'Inclure la traduction bilingue' : 'Include bilingual translation'}</span>
+                </label>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <button
+                  onClick={() => {
+                    const textToCopy = `╔══════════════════════════════════════════╗\n║             SAGESSE & MAXIMES            ║\n╠══════════════════════════════════════════╣\n║                                          ║\n║  "${lang === 'fr' ? featuredQuote.quoteFr : featuredQuote.quote}"\n║                                          ║\n║  — ${featuredQuote.author} (${featuredQuote.year})       \n╚══════════════════════════════════════════╝`;
+                    navigator.clipboard.writeText(textToCopy);
+                    setCopiedPosterType('ascii');
+                    setTimeout(() => setCopiedPosterType(null), 2500);
+                  }}
+                  className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                    copiedPosterType === 'ascii'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                  }`}
+                >
+                  {copiedPosterType === 'ascii' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span>
+                    {copiedPosterType === 'ascii'
+                      ? (lang === 'fr' ? 'Affiche ASCII copiée !' : 'ASCII Poster Copied!')
+                      : (lang === 'fr' ? "Copier l'Affiche ASCII" : 'Copy ASCII Poster')}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const htmlCode = `<div style="padding: 2.5rem; border-radius: 1.5rem; background: linear-gradient(135deg, #1c1917, #0c0a09); border: 1px solid rgba(245, 158, 11, 0.3); color: #fef3c7; max-width: 28rem; text-align: center; font-family: Georgia, serif; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+  <div style="font-size: 0.65rem; letter-spacing: 0.15em; opacity: 0.4; font-weight: bold; margin-bottom: 1.5rem;">DEGREE UNLOCKER • SAGESSE</div>
+  <blockquote style="font-size: 1.25rem; font-style: italic; line-height: 1.6; margin-bottom: 1.5rem;">&ldquo;${lang === 'fr' ? featuredQuote.quoteFr : featuredQuote.quote}&rdquo;</blockquote>
+  <div style="border-top: 1px solid rgba(254, 243, 199, 0.1); padding-top: 1rem;">
+    <h5 style="font-weight: bold; font-size: 0.85rem; margin: 0;">${featuredQuote.author}</h5>
+    <p style="font-size: 0.7rem; opacity: 0.7; margin: 0.25rem 0 0 0;">${featuredQuote.role} • ${featuredQuote.year}</p>
+  </div>
+</div>`;
+                    navigator.clipboard.writeText(htmlCode);
+                    setCopiedPosterType('html');
+                    setTimeout(() => setCopiedPosterType(null), 2500);
+                  }}
+                  className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                    copiedPosterType === 'html'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 hover:bg-slate-800 text-white'
+                  }`}
+                >
+                  {copiedPosterType === 'html' ? <Check className="w-4 h-4" /> : <CheckSquare className="w-4 h-4" />}
+                  <span>
+                    {copiedPosterType === 'html'
+                      ? (lang === 'fr' ? 'Code HTML copié !' : 'HTML Code Copied!')
+                      : (lang === 'fr' ? "Copier le code HTML de l'affiche" : 'Copy HTML Poster Code')}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expandable Reflection Journal Sub-panel (Feature 2) */}
+      {spotlightActionTab === 'journal' && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-lg space-y-4 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                <ScrollText className="w-4 h-4 text-indigo-500" />
+                <span>{lang === 'fr' ? 'Cahier de Réflexion Socratique Personnel' : 'Socratic Personal Reflection Notebook'}</span>
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {lang === 'fr' ? 'Rédigez votre réflexion sur cette maxime. Chaque réflexion vous rapporte +15 Points de Sagesse.' : 'Write your personal analysis or takeaway of this maxim. Get +15 Wisdom Points per log.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setSpotlightActionTab('none')}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              title={lang === 'fr' ? 'Fermer le cahier' : 'Close notebook'}
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-slate-700">
+              {lang === 'fr'
+                ? `Que vous inspire cette parole d'éloquence dans vos études ou votre éthique personnelle ?`
+                : 'What does this eloquence thought inspire in your academic work or personal morals?'}
+            </label>
+            <textarea
+              value={reflectionText}
+              onChange={(e) => setReflectionText(e.target.value)}
+              placeholder={lang === 'fr' ? "Rédigez une réflexion structurée (ex : En quoi l'apparence diffère-t-elle de la compétence réelle sous le capot ?)..." : "Write a structured analysis (e.g. How does cosmetic style differ from genuine engine competence?)..."}
+              className="w-full p-3 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+              rows={4}
+            />
+
+            {showReflectionSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-2 animate-bounce">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>{lang === 'fr' ? 'Réflexion enregistrée avec succès ! +15 Points de Sagesse accordés.' : 'Reflection saved! +15 Wisdom Points granted.'}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-[10px] text-slate-400">
+                {lang === 'fr' ? 'Sauvegarde locale automatique activée' : 'Automatic local storage active'}
+              </span>
+              <button
+                onClick={handleSaveReflection}
+                disabled={!reflectionText.trim()}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span>{lang === 'fr' ? 'Valider et Gagner +15 XP' : 'Submit and Get +15 XP'}</span>
+              </button>
+            </div>
+
+            {/* Historical Reflections for this specific Quote */}
+            {(reflections[featuredQuote.id] || []).length > 0 && (
+              <div className="pt-4 border-t border-slate-100 space-y-2">
+                <span className="font-bold text-xs text-slate-700 block">{lang === 'fr' ? 'Vos réflexions passées sur cette maxime :' : 'Your previous reflections on this quote:'}</span>
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  {(reflections[featuredQuote.id] || []).map((ref, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 italic relative">
+                      <p>&ldquo;{ref}&rdquo;</p>
+                      <span className="text-[9px] text-slate-400 block mt-1.5 text-right font-mono">#{(reflections[featuredQuote.id] || []).length - idx}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Two-Column Layout with Side Category Sub-panel */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -741,42 +1212,42 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                 </span>
               </button>
 
-              {/* 2. Collapsible Group: Philosophie & Maximes de Dolfius 1er */}
-              <div className="space-y-0.5 rounded-xl border border-amber-200/80 bg-gradient-to-b from-amber-50/60 to-white/40 p-1">
+              {/* 2. Main Category: Maximes de Dolfius 1er & Sagesses (with nested sub-categories) */}
+              <div className="space-y-0.5 rounded-xl border border-amber-200/80 bg-linear-to-b from-amber-50/60 to-white/40 p-1">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => {
-                      setSelectedCategory('philosophy_group');
+                      setSelectedCategory('philosophy_maxims');
                       setSelectedSubcategory('all');
                     }}
                     className={`flex-1 text-left px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
-                      selectedCategory === 'philosophy_group' || selectedCategory === 'philosophy_maxims' || selectedCategory === 'philosophy'
+                      selectedCategory === 'philosophy_maxims'
                         ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
                         : 'text-amber-950 hover:bg-amber-100/70'
                     }`}
                   >
                     <span className="flex items-center gap-2 truncate">
                       <Crown className="w-4 h-4 text-amber-700 shrink-0" />
-                      <span className="truncate">{lang === 'fr' ? 'Philosophie & Maximes' : 'Philosophy & Maxims'}</span>
+                      <span className="truncate">{lang === 'fr' ? 'Maximes de Dolfius 1er' : 'Dolfius Maxims'}</span>
                     </span>
                     <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-900/10 text-amber-950 font-black">
-                      {allQuotes.filter(q => q.category === 'philosophy_maxims' || q.category === 'philosophy').length}
+                      {dolfiusQuotesCount + imageMaximesCount}
                     </span>
                   </button>
 
                   <button
                     onClick={() => setIsPhilosophyGroupExpanded(prev => !prev)}
                     className="p-1.5 text-amber-800 hover:text-amber-950 hover:bg-amber-200/50 rounded-md transition-transform cursor-pointer"
-                    title={isPhilosophyGroupExpanded ? (lang === 'fr' ? 'Replier' : 'Collapse') : (lang === 'fr' ? 'Déplier' : 'Expand')}
+                    title={isPhilosophyGroupExpanded ? (lang === 'fr' ? 'Replier les sous-catégories' : 'Collapse subcategories') : (lang === 'fr' ? 'Déplier les sous-catégories' : 'Expand subcategories')}
                   >
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isPhilosophyGroupExpanded ? '' : '-rotate-90'}`} />
                   </button>
                 </div>
 
-                {/* Collapsible Sub-categories */}
+                {/* Sub-categories cleanly merged directly under Dolfius Maxims */}
                 {isPhilosophyGroupExpanded && (
                   <div className="pl-2 pr-1 py-1 space-y-1 text-[11px] animate-in fade-in duration-150">
-                    {/* Dolfius Maxims (All) */}
+                    {/* All Dolfius Maxims */}
                     <button
                       onClick={() => {
                         setSelectedCategory('philosophy_maxims');
@@ -790,7 +1261,7 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                     >
                       <span className="flex items-center gap-1.5 truncate">
                         <Crown className="w-3 h-3 text-amber-500 shrink-0" />
-                        <span className="truncate">{lang === 'fr' ? 'Maximes de Dolfius 1er' : 'Dolfius Maxims'}</span>
+                        <span className="truncate">{lang === 'fr' ? 'Toutes les Maximes' : 'All Maxims'}</span>
                       </span>
                       <span className="text-[10px] opacity-80">{dolfiusQuotesCount + imageMaximesCount}</span>
                     </button>
@@ -807,7 +1278,7 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                           : 'text-slate-700 hover:bg-amber-100/60'
                       }`}
                     >
-                      <span className="truncate">{lang === 'fr' ? '• Discours & Piliers' : '• Speeches & Maxims'}</span>
+                      <span className="truncate">{lang === 'fr' ? '• Discours & Piliers' : '• Speeches & Pillars'}</span>
                       <span className="text-[10px] opacity-80">{dolfiusQuotesCount}</span>
                     </button>
 
@@ -826,28 +1297,32 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                       <span className="truncate">{lang === 'fr' ? '• Maximes d\'Attitude' : '• Attitude Maxims'}</span>
                       <span className="text-[10px] opacity-80">{imageMaximesCount}</span>
                     </button>
-
-                    {/* Ancient & Modern Philosophy */}
-                    <button
-                      onClick={() => {
-                        setSelectedCategory('philosophy');
-                        setSelectedSubcategory('all');
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                        selectedCategory === 'philosophy'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-800 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5 truncate">
-                        <Landmark className="w-3 h-3 text-indigo-500 shrink-0" />
-                        <span className="truncate">{lang === 'fr' ? 'Philosophie Antique' : 'Philosophy'}</span>
-                      </span>
-                      <span className="text-[10px] opacity-80">{allQuotes.filter(q => q.category === 'philosophy').length}</span>
-                    </button>
                   </div>
                 )}
               </div>
+
+              {/* 3. Main Category: Philosophie Antique & Moderne */}
+              <button
+                onClick={() => {
+                  setSelectedCategory('philosophy');
+                  setSelectedSubcategory('all');
+                }}
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                  selectedCategory === 'philosophy'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <Landmark className={`w-3.5 h-3.5 shrink-0 ${selectedCategory === 'philosophy' ? 'text-amber-400' : 'text-slate-500'}`} />
+                  <span className="truncate">{lang === 'fr' ? 'Philosophie Antique & Moderne' : 'Ancient & Modern Philosophy'}</span>
+                </span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  selectedCategory === 'philosophy' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {allQuotes.filter(q => q.category === 'philosophy').length}
+                </span>
+              </button>
 
               {/* Other Main Categories */}
               {mainCategories.filter(cat => cat.id !== 'all' && cat.id !== 'philosophy_maxims' && cat.id !== 'philosophy').map(cat => {
@@ -994,6 +1469,39 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                 </button>
               </div>
             )}
+
+            {/* Tag Filter Row (Feature 3) */}
+            <div className="pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+                  <Filter className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>{lang === 'fr' ? 'Thématiques :' : 'Themes :'}</span>
+                </span>
+                {[
+                  { id: 'all', labelFr: 'Toutes', labelEn: 'All' },
+                  { id: 'égalité', labelFr: 'Égalité', labelEn: 'Equality' },
+                  { id: 'couple', labelFr: 'Couple', labelEn: 'Couple' },
+                  { id: 'mariage', labelFr: 'Mariage', labelEn: 'Marriage' },
+                  { id: 'moteur', labelFr: 'Substance & Moteur', labelEn: 'Substance & Engine' },
+                  { id: 'travail', labelFr: 'Travail & Action', labelEn: 'Work & Labor' },
+                  { id: 'réciprocité', labelFr: 'Réciprocité', labelEn: 'Reciprocity' },
+                  { id: 'discipline', labelFr: 'Discipline', labelEn: 'Discipline' },
+                  { id: 'résilience', labelFr: 'Résilience', labelEn: 'Resilience' },
+                ].map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => setSelectedTag(tag.id)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      selectedTag === tag.id
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs font-extrabold'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                    }`}
+                  >
+                    #{lang === 'fr' ? tag.labelFr : tag.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Dedicated Section: Maximes & Principes de Dolfius 1er (Shown in philosophy_maxims when viewing all or dolfius maximes) */}
@@ -1059,6 +1567,15 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                           </span>
 
                           <div className="flex items-center gap-1">
+                            {onOpenCoach && (
+                              <button
+                                onClick={() => handleDiscussWithCoach(dq)}
+                                className="p-1.5 rounded-md text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/60 transition-colors cursor-pointer"
+                                title={lang === 'fr' ? 'Discuter avec le Coach Socratique' : 'Discuss with Socratic Coach'}
+                              >
+                                <Brain className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               onClick={() => togglePin(dq.id)}
                               className={`p-1.5 rounded-md transition-colors cursor-pointer ${
@@ -1127,16 +1644,16 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
               return (
                 <div
                   key={q.id}
-                  className={`break-inside-avoid mb-4 sm:mb-5 inline-block w-full align-top rounded-2xl p-4 sm:p-5 bg-white border transition-all duration-200 hover:shadow-md ${
+                  className={`break-inside-avoid mb-4 sm:mb-5 inline-block w-full align-top rounded-2xl p-4 sm:p-5 border transition-all duration-200 hover:shadow-md ${
                     isCreator
-                      ? 'border-amber-400 ring-2 ring-amber-300/40 bg-gradient-to-br from-amber-50/50 via-white to-indigo-50/40 shadow-xs'
+                      ? 'border-amber-400 dark:border-amber-500/80 ring-2 ring-amber-300/40 dark:ring-amber-500/20 bg-gradient-to-br from-amber-50/50 via-white to-indigo-50/40 dark:from-amber-950/40 dark:via-slate-900 dark:to-indigo-950/40 shadow-xs'
                       : isImageMaxim
-                      ? 'border-indigo-300 ring-1 ring-indigo-200/50 bg-gradient-to-br from-indigo-50/30 via-white to-amber-50/20'
+                      ? 'border-indigo-300 dark:border-indigo-500/80 ring-1 ring-indigo-200/50 dark:ring-indigo-500/20 bg-gradient-to-br from-indigo-50/30 via-white to-amber-50/20 dark:from-indigo-950/40 dark:via-slate-900 dark:to-amber-950/30'
                       : isNewtonParody 
-                      ? 'border-amber-400/80 ring-2 ring-amber-300/40 bg-gradient-to-br from-amber-50/40 via-white to-indigo-50/30 shadow-xs'
+                      ? 'border-amber-400/80 dark:border-amber-500/80 ring-2 ring-amber-300/40 dark:ring-amber-500/20 bg-gradient-to-br from-amber-50/40 via-white to-indigo-50/30 dark:from-amber-950/50 dark:via-slate-900 dark:to-indigo-950/40 shadow-xs'
                       : isPinned 
-                      ? 'border-amber-300 ring-1 ring-amber-200/60 bg-amber-50/20' 
-                      : 'border-slate-200/80 hover:border-slate-300'
+                      ? 'border-amber-300 dark:border-amber-500/60 ring-1 ring-amber-200/60 bg-amber-50/20 dark:bg-amber-950/30' 
+                      : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="space-y-3">
@@ -1168,6 +1685,15 @@ export const FamousQuotesView: React.FC<FamousQuotesViewProps> = ({
                       </div>
 
                       <div className="flex items-center gap-1">
+                        {onOpenCoach && (
+                          <button
+                            onClick={() => handleDiscussWithCoach(q)}
+                            className="p-1.5 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                            title={lang === 'fr' ? 'Discuter avec le Coach Socratique' : 'Discuss with Socratic Coach'}
+                          >
+                            <Brain className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => togglePin(q.id)}
                           className={`p-1.5 rounded-md transition-colors cursor-pointer ${

@@ -1,12 +1,13 @@
 export interface FetchWithRetryOptions extends RequestInit {
   retries?: number;
   initialDelayMs?: number;
+  timeoutMs?: number;
   onRetry?: (attempt: number, error: any) => void;
 }
 
 /**
- * Performs a fetch request with exponential backoff retry logic.
- * Particularly useful for handling 503 Service Unavailable or transient network glitches.
+ * Performs a fetch request with exponential backoff retry logic and automatic AbortController timeout.
+ * Prevents requests from hanging indefinitely on slow/unresponsive endpoints.
  */
 export async function fetchWithRetry(
   url: string,
@@ -14,17 +15,37 @@ export async function fetchWithRetry(
   ..._rest: any[]
 ): Promise<Response> {
   const {
-    retries = 3,
-    initialDelayMs = 1000,
+    retries = 2,
+    initialDelayMs = 300,
+    timeoutMs = 4000,
     onRetry,
+    signal: userSignal,
     ...fetchOptions
   } = options;
 
   let attempt = 0;
 
   while (true) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    // Merge custom user signal if provided
+    let combinedSignal = controller.signal;
+    if (userSignal) {
+      if (userSignal.aborted) {
+        controller.abort();
+      } else {
+        userSignal.addEventListener('abort', () => controller.abort());
+      }
+    }
+
     try {
-      const response = await fetch(url, fetchOptions);
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: combinedSignal,
+      });
+
+      clearTimeout(timeoutId);
 
       // If server returns 503 Service Unavailable or 429 Too Many Requests, retry
       if ((response.status === 503 || response.status === 429) && attempt < retries) {
@@ -32,9 +53,14 @@ export async function fetchWithRetry(
       }
 
       return response;
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
       attempt++;
+
       if (attempt > retries) {
+        if (error?.name === 'AbortError') {
+          throw new Error(`Request timeout after ${timeoutMs}ms`);
+        }
         throw error;
       }
 

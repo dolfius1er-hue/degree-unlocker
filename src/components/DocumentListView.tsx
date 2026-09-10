@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SchoolDocument, AppLanguage, CustomTag } from '../types';
 import { DocumentCard } from './DocumentCard';
 import { TagManagerModal, TAG_COLORS } from './TagManagerModal';
+import { calculateReadingTime } from '../utils/readingTime';
 import { 
   BookOpen, 
   Search, 
@@ -83,31 +84,35 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<'all' | 'note' | 'pdf'>('all');
+  const [readingTimeFilter, setReadingTimeFilter] = useState<'all' | 'short' | 'medium' | 'long'>('all');
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [inlineNewTag, setInlineNewTag] = useState('');
   const [showTagAutocomplete, setShowTagAutocomplete] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    try {
-      return (localStorage.getItem('degree_unlocker_library_view_mode') as 'grid' | 'list') || 'grid';
-    } catch {
-      return 'grid';
-    }
-  });
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Recently Viewed Documents (Top 5)
   const RECENT_DOCS_STORAGE_KEY = 'degreelocker_recently_viewed_docs';
-  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>(() => {
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+
+  // Hydrate local UI preferences on mount (client-safe)
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('degree_unlocker_library_view_mode') as 'grid' | 'list' | null;
+      if (savedMode === 'grid' || savedMode === 'list') {
+        setViewMode(savedMode);
+      }
+    } catch {}
+
     try {
       const raw = localStorage.getItem(RECENT_DOCS_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed.slice(0, 5);
+        if (Array.isArray(parsed)) setRecentlyViewedIds(parsed.slice(0, 5));
       }
     } catch (e) {
       console.warn('Failed to load recently viewed documents:', e);
     }
-    return [];
-  });
+  }, []);
 
   const recordDocumentView = (docId: string) => {
     if (!docId) return;
@@ -259,6 +264,14 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
     if (typeFilter === 'note' && doc.type === 'pdf') return false;
     if (typeFilter === 'pdf' && doc.type !== 'pdf') return false;
 
+    // Reading time filter
+    if (readingTimeFilter !== 'all') {
+      const estimate = calculateReadingTime(doc.content, doc.summary);
+      if (readingTimeFilter === 'short' && estimate.minutes > 5) return false;
+      if (readingTimeFilter === 'medium' && (estimate.minutes <= 5 || estimate.minutes > 15)) return false;
+      if (readingTimeFilter === 'long' && estimate.minutes <= 15) return false;
+    }
+
     // Multi-Tag filter (must match all selected tags)
     if (selectedTags.length > 0) {
       const docTagsLower = (doc.tags || []).map((t) => t.toLowerCase());
@@ -269,10 +282,10 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
     // Search query filter
     if (searchFilter.trim()) {
       const q = searchFilter.toLowerCase();
-      const matchTitle = doc.title.toLowerCase().includes(q);
-      const matchSubject = doc.subject.toLowerCase().includes(q);
-      const matchContent = doc.content.toLowerCase().includes(q);
-      const matchTag = doc.tags?.some(t => t.toLowerCase().includes(q));
+      const matchTitle = (doc.title || '').toLowerCase().includes(q);
+      const matchSubject = (doc.subject || '').toLowerCase().includes(q);
+      const matchContent = (doc.content || '').toLowerCase().includes(q);
+      const matchTag = doc.tags?.some(t => (t || '').toLowerCase().includes(q));
       return matchTitle || matchSubject || matchContent || matchTag;
     }
 
@@ -284,9 +297,10 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
     setSelectedSubject('all');
     setSelectedTags([]);
     setTypeFilter('all');
+    setReadingTimeFilter('all');
   };
 
-  const hasActiveFilters = searchFilter.trim() !== '' || selectedSubject !== 'all' || selectedTags.length > 0 || typeFilter !== 'all';
+  const hasActiveFilters = searchFilter.trim() !== '' || selectedSubject !== 'all' || selectedTags.length > 0 || typeFilter !== 'all' || readingTimeFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -410,13 +424,25 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                   </button>
 
                   <div className="space-y-1.5 pr-4">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/20 truncate max-w-[120px]">
                         {doc.subject}
                       </span>
                       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
                         {doc.type === 'pdf' ? 'PDF' : doc.type === 'word_docx' ? 'Word' : doc.type === 'excel_sheet' ? 'Excel' : 'Note'}
                       </span>
+                      {(() => {
+                        const est = calculateReadingTime(doc.content, doc.summary);
+                        return (
+                          <span 
+                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30 flex items-center gap-1"
+                            title={`${est.wordCount} ${lang === 'fr' ? 'mots' : 'words'}`}
+                          >
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{est.formatted}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <h4
@@ -704,6 +730,58 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
           </button>
         </div>
 
+        {/* Row 4: Reading Time Filter Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-slate-100 flex-wrap">
+          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-500 mr-1 shrink-0">
+            <Clock className="w-3 h-3 text-amber-500" />
+            <span>{lang === 'fr' ? 'Temps de lecture :' : 'Reading Time:'}</span>
+          </div>
+
+          <button
+            onClick={() => setReadingTimeFilter('all')}
+            className={`px-2.5 py-0.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+              readingTimeFilter === 'all'
+                ? 'bg-amber-600 text-white font-semibold shadow-2xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {lang === 'fr' ? 'Toutes durées' : 'All durations'}
+          </button>
+
+          <button
+            onClick={() => setReadingTimeFilter('short')}
+            className={`px-2.5 py-0.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+              readingTimeFilter === 'short'
+                ? 'bg-emerald-600 text-white font-semibold shadow-2xs'
+                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60'
+            }`}
+          >
+            {lang === 'fr' ? '⚡ Flash (≤ 5 min)' : '⚡ Quick (≤ 5 min)'}
+          </button>
+
+          <button
+            onClick={() => setReadingTimeFilter('medium')}
+            className={`px-2.5 py-0.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+              readingTimeFilter === 'medium'
+                ? 'bg-indigo-600 text-white font-semibold shadow-2xs'
+                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60'
+            }`}
+          >
+            {lang === 'fr' ? '📖 Standard (5-15 min)' : '📖 Standard (5-15 min)'}
+          </button>
+
+          <button
+            onClick={() => setReadingTimeFilter('long')}
+            className={`px-2.5 py-0.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+              readingTimeFilter === 'long'
+                ? 'bg-amber-700 text-white font-semibold shadow-2xs'
+                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
+            }`}
+          >
+            {lang === 'fr' ? '🧠 Approfondi (> 15 min)' : '🧠 Deep Dive (> 15 min)'}
+          </button>
+        </div>
+
         {/* Active Filters Bar (if any filter is applied) */}
         {hasActiveFilters && (
           <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-slate-600">
@@ -811,6 +889,25 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
                           {doc.type === 'pdf' ? 'PDF' : doc.type === 'word_docx' ? 'Word' : doc.type === 'excel_sheet' ? 'Excel' : 'Note'}
                         </span>
+                        {(() => {
+                          const est = calculateReadingTime(doc.content, doc.summary);
+                          return (
+                            <span 
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 border ${
+                                est.minutes <= 5
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60'
+                                  : est.minutes <= 15
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200/60'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200/60'
+                              }`}
+                              title={`${est.wordCount} ${lang === 'fr' ? 'mots' : 'words'} (~200 mots/min)`}
+                            >
+                              <Clock className="w-3 h-3 shrink-0" />
+                              <span>{est.formatted}</span>
+                              <span className="text-[9px] opacity-70 hidden sm:inline">({est.wordCount} {lang === 'fr' ? 'mots' : 'w'})</span>
+                            </span>
+                          );
+                        })()}
                         <span className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
                           <Calendar className="w-3 h-3 shrink-0" />
                           <span>{doc.date}</span>

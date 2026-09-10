@@ -168,7 +168,7 @@ export function exportNotebookAsPdf(
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(15);
   pdf.setTextColor(penColors.black.r, penColors.black.g, penColors.black.b);
-  const titleLines = pdf.splitTextToSize(document.title.toUpperCase(), contentWidth - 4);
+  const titleLines = pdf.splitTextToSize((document.title || 'Document sans titre').toUpperCase(), contentWidth - 4);
   pdf.text(titleLines, marginX + 2, cursorY);
   cursorY += titleLines.length * 6;
 

@@ -930,7 +930,7 @@ export const BlocknoteView: React.FC<BlocknoteViewProps> = ({
               </span>
             </div>
             <p className="text-xs text-stone-500 font-medium mt-1">
-              {lang === 'fr' ? 'Matière :' : 'Subject:'} {document.subject} • {lang === 'fr' ? 'Méthode :' : 'Format:'} {guide.layoutStructure.toUpperCase()}
+              {lang === 'fr' ? 'Matière :' : 'Subject:'} {document.subject} • {lang === 'fr' ? 'Méthode :' : 'Format:'} {(guide.layoutStructure || 'cornell').toUpperCase()}
             </p>
           </div>
 

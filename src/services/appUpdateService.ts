@@ -19,7 +19,7 @@ export interface UpdateInfo {
 type UpdateListener = (info: UpdateInfo) => void;
 
 // Current runtime application version constant
-export const CURRENT_APP_VERSION = '3.2.1';
+export const CURRENT_APP_VERSION = '6.5.0';
 
 class AppUpdateService {
   private currentVersion: string = CURRENT_APP_VERSION;

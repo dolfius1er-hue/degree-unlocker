@@ -425,3 +425,158 @@ export async function toggleGoogleTaskStatus(
 
   return await res.json();
 }
+
+// -------------------------------------------------------------
+// GOOGLE KEEP API
+// -------------------------------------------------------------
+
+export interface GoogleKeepNote {
+  name: string; // "notes/..."
+  title?: string;
+  body?: {
+    text?: {
+      text?: string;
+    };
+  };
+}
+
+/**
+ * List notes from Google Keep
+ */
+export async function listKeepNotes(): Promise<GoogleKeepNote[]> {
+  const token = await ensureToken();
+  const res = await fetch('https://keep.googleapis.com/v1/notes', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Google Keep error: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.notes || [];
+}
+
+/**
+ * Create a new Google Keep Note
+ */
+export async function createKeepNote(title: string, text: string): Promise<GoogleKeepNote> {
+  const token = await ensureToken();
+  const res = await fetch('https://keep.googleapis.com/v1/notes', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title,
+      body: {
+        text: {
+          text
+        }
+      }
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Failed to create Keep Note: ${res.statusText}`);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Delete a Google Keep Note
+ */
+export async function deleteKeepNote(noteName: string): Promise<void> {
+  const token = await ensureToken();
+  const res = await fetch(`https://keep.googleapis.com/v1/${noteName}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Failed to delete Keep Note: ${res.statusText}`);
+  }
+}
+
+// -------------------------------------------------------------
+// GOOGLE CHAT API
+// -------------------------------------------------------------
+
+export interface GoogleChatSpace {
+  name: string; // "spaces/..."
+  displayName?: string;
+  type?: 'SPACE' | 'ROOM' | 'DIRECT_MESSAGE';
+}
+
+export interface GoogleChatMessage {
+  name: string; // "spaces/.../messages/..."
+  text?: string;
+  createTime?: string;
+  sender?: {
+    displayName?: string;
+    email?: string;
+  };
+}
+
+/**
+ * List Google Chat Spaces
+ */
+export async function listChatSpaces(): Promise<GoogleChatSpace[]> {
+  const token = await ensureToken();
+  const res = await fetch('https://chat.googleapis.com/v1/spaces', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Google Chat error: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.spaces || [];
+}
+
+/**
+ * List Messages in a Google Chat Space
+ */
+export async function listChatMessages(spaceName: string): Promise<GoogleChatMessage[]> {
+  const token = await ensureToken();
+  const res = await fetch(`https://chat.googleapis.com/v1/${spaceName}/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Failed to fetch Chat messages: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data.messages || [];
+}
+
+/**
+ * Send a message to a Google Chat Space
+ */
+export async function createChatMessage(spaceName: string, text: string): Promise<GoogleChatMessage> {
+  const token = await ensureToken();
+  const res = await fetch(`https://chat.googleapis.com/v1/${spaceName}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Failed to send Chat message: ${res.statusText}`);
+  }
+
+  return await res.json();
+}

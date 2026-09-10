@@ -19,8 +19,13 @@ import {
   Languages,
   Plus,
   Smartphone,
-  Highlighter
+  Highlighter,
+  Clock,
+  Share2,
+  Check,
+  Download
 } from 'lucide-react';
+import { calculateReadingTime } from '../utils/readingTime';
 
 interface DocumentCardProps {
   document: SchoolDocument;
@@ -62,21 +67,73 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onSendToPhone,
 }) => {
   const [isAssignPopoverOpen, setIsAssignPopoverOpen] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
+  const [showDownloadToast, setShowDownloadToast] = useState(false);
   const badge = getSubjectBadgeClass(document.subject);
   const isPdf = document.type === 'pdf';
   const hasBlocknote = Boolean(document.blocknoteReproduction);
+  const readingTime = calculateReadingTime(document.content, document.summary);
+
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const docTitle = document.title || 'Document sans titre';
+      const exportText = `========================================\n${docTitle.toUpperCase()}\nSubject: ${document.subject || 'General'}\nDate: ${document.date || new Date().toLocaleDateString()}\n========================================\n\n${document.summary ? `SUMMARY:\n${document.summary}\n\n` : ''}CONTENT:\n${document.content}\n`;
+      const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = `${docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'degreeunlocker_doc'}.txt`;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setShowDownloadToast(true);
+      setTimeout(() => setShowDownloadToast(false), 2400);
+    } catch (err) {
+      console.warn('Download document failed', err);
+    }
+  };
+
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/#note-${document.id}`;
+    const shareText = `📚 ${document.title}\n${document.summary || document.content.slice(0, 120)}...\n${shareUrl}`;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareText);
+    }
+    setShowShareToast(true);
+    setTimeout(() => setShowShareToast(false), 2400);
+  };
 
   return (
     <div 
       id={`doc-card-${document.id}`}
-      className={`group relative flex flex-col justify-between rounded-xl bg-white border transition-all duration-200 hover:shadow-md ${
+      className={`win11-window group relative flex flex-col justify-between rounded-xl bg-white border transition-all duration-200 hover:shadow-md ${
         isSelectedForBlocknote 
           ? 'border-indigo-500 ring-2 ring-indigo-400/30' 
           : 'border-slate-200 hover:border-slate-300'
       }`}
     >
+      {/* Brief Share / Download Toast Notifications */}
+      {showShareToast && (
+        <div className="absolute top-2 right-2 z-30 px-3 py-1.5 bg-slate-900 text-white font-bold text-xs rounded-lg shadow-xl border border-slate-700 flex items-center gap-1.5 animate-bounce">
+          <Check className="w-3.5 h-3.5 text-emerald-400" />
+          <span>{lang === 'fr' ? 'Lien copié !' : 'Link copied!'}</span>
+        </div>
+      )}
+
+      {showDownloadToast && (
+        <div className="absolute top-2 right-2 z-30 px-3 py-1.5 bg-indigo-950 text-white font-bold text-xs rounded-lg shadow-xl border border-indigo-700 flex items-center gap-1.5 animate-bounce">
+          <Check className="w-3.5 h-3.5 text-indigo-400" />
+          <span>{lang === 'fr' ? 'Document téléchargé !' : 'Downloaded!'}</span>
+        </div>
+      )}
+
       <div className="p-5">
-        {/* Header: Subject & Badges */}
+        {/* Header: Subject, Badges & Top-Right Action Controls */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${badge.bg} ${badge.text} ${badge.border}`}>
@@ -111,6 +168,15 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
               </span>
             )}
 
+            {/* Reading Time Badge for Study Session Management */}
+            <span
+              className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border ${readingTime.badgeColorClass}`}
+              title={lang === 'fr' ? `${readingTime.wordCount} mots estimés • ${readingTime.sessionCategoryFr}` : `${readingTime.wordCount} words • ${readingTime.sessionCategoryEn}`}
+            >
+              <Clock className="w-3 h-3 shrink-0" />
+              <span>{lang === 'fr' ? readingTime.badgeTextFr : readingTime.badgeTextEn}</span>
+            </span>
+
             {document.gradeLevel && (
               <span className="text-[11px] text-slate-400 font-medium">
                 {document.gradeLevel}
@@ -118,9 +184,39 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1 text-slate-400 text-xs shrink-0">
-            <Calendar className="w-3 h-3" />
-            <span>{document.date || (lang === 'fr' ? 'Récent' : 'Recent')}</span>
+          {/* Top Right Corner Controls: Calendar Date, Download & Share Buttons */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="hidden sm:flex items-center gap-1 text-slate-400 text-xs mr-0.5">
+              <Calendar className="w-3 h-3" />
+              <span>{document.date || (lang === 'fr' ? 'Récent' : 'Recent')}</span>
+            </div>
+
+            {/* Unified Win11 Header Controls Container */}
+            <div className="flex items-center gap-1 bg-slate-100/90 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200/90 dark:border-slate-700/70 shadow-2xs">
+              {/* Download Button inside .win11-window header */}
+              <button
+                type="button"
+                data-win-action="download"
+                onClick={handleDownloadClick}
+                className="h-7 w-7 p-0 flex items-center justify-center rounded-md text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-white dark:hover:bg-slate-700 transition-all cursor-pointer shadow-2xs border border-transparent hover:border-slate-200 dark:hover:border-slate-600"
+                title={lang === 'fr' ? 'Télécharger la note en fichier texte (.txt)' : 'Download note as text file (.txt)'}
+                aria-label={lang === 'fr' ? `Télécharger la note "${document.title}" au format texte (.txt)` : `Download note "${document.title}" as text file (.txt)`}
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Share Button inside .win11-window header */}
+              <button
+                type="button"
+                data-win-action="share"
+                onClick={handleShareClick}
+                className="h-7 w-7 p-0 flex items-center justify-center rounded-md text-slate-500 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-white dark:hover:bg-slate-700 transition-all cursor-pointer shadow-2xs border border-transparent hover:border-slate-200 dark:hover:border-slate-600"
+                title={lang === 'fr' ? 'Partager le lien de ce cours' : 'Share course link'}
+                aria-label={lang === 'fr' ? `Copier le lien de partage pour la note "${document.title}"` : `Copy shareable link for note "${document.title}"`}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 

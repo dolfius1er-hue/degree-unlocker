@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppLogo } from './AppLogo';
 import { 
   BookOpen, 
   Search, 
@@ -61,27 +62,27 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-3">
           
-          {/* Brand & Degree Unlocker Title */}
+          {/* Brand & Degree Unlocker Academy Title */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
               id="brand-home-btn"
               onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-2 text-left focus:outline-hidden group"
+              className="flex items-center gap-2.5 text-left focus:outline-hidden group cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-600 to-indigo-800 group-hover:from-indigo-700 group-hover:to-indigo-900 flex items-center justify-center text-white shadow-xs transition-all">
-                <Unlock className="w-4.5 h-4.5 text-amber-300" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-amber-500/20 via-slate-900 to-black border border-amber-400/40 flex items-center justify-center text-white shadow-md shadow-amber-950/40 group-hover:scale-105 transition-transform shrink-0">
+                <AppLogo size="sm" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-none">
-                    Degree Unlocker
+                  <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-none font-serif">
+                    Degree Unlocker Academy
                   </h1>
-                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded-md">
-                    150MB PC
+                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded-md">
+                    Academy v6.5
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 truncate hidden sm:block font-semibold">
-                  {lang === 'fr' ? 'Base de Connaissances & Révision' : 'Academic Notes & AI Companion'}
+                <p className="text-[10px] text-amber-700/80 uppercase tracking-widest mt-0.5 truncate hidden sm:block font-semibold">
+                  {lang === 'fr' ? 'Académie d\'Excellence & Manuels Officiels' : 'Academy of Academic Excellence'}
                 </p>
               </div>
             </button>

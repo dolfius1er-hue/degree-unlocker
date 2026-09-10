@@ -4,6 +4,8 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signInAnonymously,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as fbSignOut, 
   onAuthStateChanged, 
   User 
@@ -15,6 +17,7 @@ import {
   setDoc, 
   getDocs, 
   getDoc,
+  getDocFromServer,
   onSnapshot,
   serverTimestamp,
   Unsubscribe
@@ -29,15 +32,81 @@ export const auth = getAuth(app);
 const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId || 'ai-studio-degreeunlocker-aea10e58-ccdf-4e46-808c-8bb2be0078dd';
 export const db = getFirestore(app, firestoreDbId);
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  // Do not crash app on transient offline status
+  if (errMessage.includes('unavailable') || errMessage.includes('the client is offline')) {
+    console.info(`[Firestore Offline] ${operationType} on ${path}: operating in offline/cache mode.`);
+    return;
+  }
+  const errInfo: FirestoreErrorInfo = {
+    error: errMessage,
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.warn('Firestore Error: ', JSON.stringify(errInfo));
+}
+
+// Test initial connection as required by firebase skill
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
+      console.info('[Firestore] Client operating in resilient offline/cache mode.');
+    }
+  }
+}
+testConnection();
+
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Add Google Workspace scopes (strictly scoped to drive.file and readonly to streamline verification & trust)
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/documents.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/tasks');
-googleProvider.addScope('https://www.googleapis.com/auth/tasks.readonly');
+// Dedicated provider for extended Google Workspace scopes (Drive / Docs / Tasks)
+const googleWorkspaceProvider = new GoogleAuthProvider();
+googleWorkspaceProvider.setCustomParameters({ prompt: 'select_account' });
+googleWorkspaceProvider.addScope('https://www.googleapis.com/auth/drive.file');
+googleWorkspaceProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+googleWorkspaceProvider.addScope('https://www.googleapis.com/auth/documents.readonly');
+googleWorkspaceProvider.addScope('https://www.googleapis.com/auth/tasks');
+googleWorkspaceProvider.addScope('https://www.googleapis.com/auth/tasks.readonly');
 
 // In-memory token cache (never stored in localStorage/sessionStorage)
 let cachedAccessToken: string | null = null;
@@ -51,11 +120,12 @@ export function setCachedAccessToken(token: string | null): void {
 }
 
 /**
- * Sign in with Google (Cross-device sync Phone <-> Computer + Google Workspace OAuth)
+ * Sign in with Google (Cross-device sync Phone <-> Computer)
  */
-export async function loginWithGoogle(): Promise<{ user: User; accessToken: string | null }> {
+export async function loginWithGoogle(withWorkspaceScopes = false): Promise<{ user: User; accessToken: string | null }> {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const provider = withWorkspaceScopes ? googleWorkspaceProvider : googleProvider;
+    const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (credential?.accessToken) {
       cachedAccessToken = credential.accessToken;
@@ -64,20 +134,34 @@ export async function loginWithGoogle(): Promise<{ user: User; accessToken: stri
     // Record user profile in Firestore
     if (result.user) {
       const userRef = doc(db, 'users', result.user.uid);
-      await setDoc(userRef, {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName || 'Étudiant',
-        photoURL: result.user.photoURL || '',
-        lastLoginAt: serverTimestamp(),
-      }, { merge: true });
+      try {
+        await setDoc(userRef, {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName || 'Étudiant',
+          photoURL: result.user.photoURL || '',
+          lastLoginAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `users/${result.user.uid}`);
+      }
     }
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (err: any) {
-    console.warn('Google popup sign-in note, trying anonymous or fallback:', err);
-    // If popup was blocked or iframe restriction occurred, offer anonymous session
-    const anonResult = await signInAnonymously(auth);
-    return { user: anonResult.user, accessToken: null };
+    console.warn('Google sign-in exception:', err);
+    let friendlyMessage = err.message || 'Erreur de connexion Google';
+    if (err.code === 'auth/popup-blocked') {
+      friendlyMessage = 'Pop-up bloquée par le navigateur. Veuillez autoriser les fenêtres pop-up ou utiliser la connexion par Email.';
+    } else if (err.code === 'auth/popup-closed-by-user') {
+      friendlyMessage = 'Connexion Google annulée.';
+    } else if (err.code === 'auth/unauthorized-domain') {
+      friendlyMessage = 'Domaine en aperçu iFrame non autorisé. Connectez-vous avec Email/Mot de passe ou ouvrez l\'app dans un nouvel onglet.';
+    } else if (err.message?.includes('access_denied') || err.message?.includes('403') || err.code === 'auth/access-denied') {
+      friendlyMessage = 'Google OAuth en mode Test (Accès 403). Utilisez l\'inscription par Email/Mot de passe ou le Mode Invité pour vous connecter instantanément.';
+    }
+    const customError = new Error(friendlyMessage);
+    (customError as any).code = err.code;
+    throw customError;
   }
 }
 
@@ -88,6 +172,39 @@ export async function loginAnonymously(): Promise<User> {
   const res = await signInAnonymously(auth);
   return res.user;
 }
+
+/**
+ * Sign in with Email and Password
+ */
+export async function loginWithEmail(email: string, pass: string): Promise<User> {
+  const res = await signInWithEmailAndPassword(auth, email, pass);
+  return res.user;
+}
+
+/**
+ * Register with Email and Password
+ */
+export async function registerWithEmail(email: string, pass: string): Promise<User> {
+  const res = await createUserWithEmailAndPassword(auth, email, pass);
+  if (res.user) {
+    const userRef = doc(db, 'users', res.user.uid);
+    try {
+      await setDoc(userRef, {
+        uid: res.user.uid,
+        email: res.user.email,
+        displayName: email.split('@')[0] || 'Étudiant',
+        lastLoginAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `users/${res.user.uid}`);
+    }
+  }
+  return res.user;
+}
+
+export const signInWithGoogle = loginWithGoogle;
+export const isFirebaseConfigured = true;
+export const isFirebaseOnline = true;
 
 /**
  * Sign out
@@ -104,6 +221,7 @@ export async function syncDocumentsToCloud(userId: string, documents: SchoolDocu
   if (!userId || !documents.length) return 0;
   let synced = 0;
   for (const document of documents) {
+    const path = `users/${userId}/documents/${document.id}`;
     try {
       const docRef = doc(db, 'users', userId, 'documents', document.id);
       await setDoc(docRef, {
@@ -112,7 +230,7 @@ export async function syncDocumentsToCloud(userId: string, documents: SchoolDocu
       }, { merge: true });
       synced++;
     } catch (e) {
-      console.error(`Failed to sync doc ${document.id} to cloud:`, e);
+      handleFirestoreError(e, OperationType.WRITE, path);
     }
   }
   return synced;
@@ -123,6 +241,7 @@ export async function syncDocumentsToCloud(userId: string, documents: SchoolDocu
  */
 export async function loadDocumentsFromCloud(userId: string): Promise<SchoolDocument[]> {
   if (!userId) return [];
+  const path = `users/${userId}/documents`;
   try {
     const colRef = collection(db, 'users', userId, 'documents');
     const snapshot = await getDocs(colRef);
@@ -132,7 +251,7 @@ export async function loadDocumentsFromCloud(userId: string): Promise<SchoolDocu
     });
     return docs;
   } catch (err) {
-    console.error('Failed to load cloud documents:', err);
+    handleFirestoreError(err, OperationType.LIST, path);
     return [];
   }
 }
@@ -144,6 +263,7 @@ export async function syncFlashcardsToCloud(userId: string, flashcards: Flashcar
   if (!userId || !flashcards.length) return 0;
   let synced = 0;
   for (const card of flashcards) {
+    const path = `users/${userId}/flashcards/${card.id}`;
     try {
       const cardRef = doc(db, 'users', userId, 'flashcards', card.id);
       await setDoc(cardRef, {
@@ -152,7 +272,7 @@ export async function syncFlashcardsToCloud(userId: string, flashcards: Flashcar
       }, { merge: true });
       synced++;
     } catch (e) {
-      console.error(`Failed to sync card ${card.id} to cloud:`, e);
+      handleFirestoreError(e, OperationType.WRITE, path);
     }
   }
   return synced;
@@ -163,6 +283,7 @@ export async function syncFlashcardsToCloud(userId: string, flashcards: Flashcar
  */
 export async function loadFlashcardsFromCloud(userId: string): Promise<Flashcard[]> {
   if (!userId) return [];
+  const path = `users/${userId}/flashcards`;
   try {
     const colRef = collection(db, 'users', userId, 'flashcards');
     const snapshot = await getDocs(colRef);
@@ -172,7 +293,7 @@ export async function loadFlashcardsFromCloud(userId: string): Promise<Flashcard
     });
     return cards;
   } catch (err) {
-    console.error('Failed to load cloud flashcards:', err);
+    handleFirestoreError(err, OperationType.LIST, path);
     return [];
   }
 }
@@ -182,6 +303,7 @@ export async function loadFlashcardsFromCloud(userId: string): Promise<Flashcard
  */
 export async function syncPreferencesToCloud(userId: string, preferences: UIPreferences): Promise<void> {
   if (!userId) return;
+  const path = `users/${userId}/settings/preferences`;
   try {
     const prefRef = doc(db, 'users', userId, 'settings', 'preferences');
     await setDoc(prefRef, {
@@ -189,7 +311,7 @@ export async function syncPreferencesToCloud(userId: string, preferences: UIPref
       updatedAt: new Date().toISOString(),
     }, { merge: true });
   } catch (e) {
-    console.error('Failed to sync preferences:', e);
+    handleFirestoreError(e, OperationType.WRITE, path);
   }
 }
 
@@ -198,6 +320,7 @@ export async function syncPreferencesToCloud(userId: string, preferences: UIPref
  */
 export async function loadPreferencesFromCloud(userId: string): Promise<UIPreferences | null> {
   if (!userId) return null;
+  const path = `users/${userId}/settings/preferences`;
   try {
     const prefRef = doc(db, 'users', userId, 'settings', 'preferences');
     const snap = await getDoc(prefRef);
@@ -205,7 +328,7 @@ export async function loadPreferencesFromCloud(userId: string): Promise<UIPrefer
       return snap.data() as UIPreferences;
     }
   } catch (e) {
-    console.error('Failed to load cloud preferences:', e);
+    handleFirestoreError(e, OperationType.GET, path);
   }
   return null;
 }
@@ -223,6 +346,7 @@ export function subscribeToCloudDocuments(
   if (!userId) {
     return () => {};
   }
+  const path = `users/${userId}/documents`;
   const colRef = collection(db, 'users', userId, 'documents');
   return onSnapshot(
     colRef,
@@ -240,7 +364,7 @@ export function subscribeToCloudDocuments(
       onDocsUpdated(docs);
     },
     (err) => {
-      console.warn('Real-time snapshot error on documents:', err);
+      handleFirestoreError(err, OperationType.LIST, path);
       if (onError) onError(err);
     }
   );
@@ -255,13 +379,18 @@ export async function sendSingleDocumentToCloud(
   sourceDevice: 'mobile' | 'pc' = 'pc'
 ): Promise<void> {
   if (!userId || !document?.id) return;
+  const path = `users/${userId}/documents/${document.id}`;
   const docRef = doc(db, 'users', userId, 'documents', document.id);
   const payload = {
     ...document,
     syncedAt: new Date().toISOString(),
     lastTransferredFrom: sourceDevice,
   };
-  await setDoc(docRef, payload, { merge: true });
+  try {
+    await setDoc(docRef, payload, { merge: true });
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, path);
+  }
 
   // Post real-time transfer notification
   await notifyDeviceTransfer(userId, {
@@ -286,6 +415,7 @@ export async function notifyDeviceTransfer(
   data: DeviceTransferRecord
 ): Promise<void> {
   if (!userId) return;
+  const path = `users/${userId}/transfers/latest`;
   try {
     const eventRef = doc(db, 'users', userId, 'transfers', 'latest');
     await setDoc(eventRef, {
@@ -293,7 +423,7 @@ export async function notifyDeviceTransfer(
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    console.warn('Failed to post transfer event:', err);
+    handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 
@@ -305,15 +435,22 @@ export function subscribeToDeviceTransfers(
   onTransfer: (data: DeviceTransferRecord) => void
 ): Unsubscribe {
   if (!userId) return () => {};
+  const path = `users/${userId}/transfers/latest`;
   const eventRef = doc(db, 'users', userId, 'transfers', 'latest');
-  return onSnapshot(eventRef, (snap) => {
-    if (snap.exists()) {
-      const data = snap.data() as any;
-      if (data && data.docTitle && data.source) {
-        onTransfer(data);
+  return onSnapshot(
+    eventRef, 
+    (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        if (data && data.docTitle && data.source) {
+          onTransfer(data);
+        }
       }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, path);
     }
-  });
+  );
 }
 
 /**
@@ -322,6 +459,7 @@ export function subscribeToDeviceTransfers(
 export async function createPairingCode(userId: string): Promise<string> {
   const randomNum = Math.floor(1000 + Math.random() * 9000);
   const code = `DG-${randomNum}`;
+  const path = `pairings/${code}`;
   try {
     const pairRef = doc(db, 'pairings', code);
     await setDoc(pairRef, {
@@ -331,7 +469,7 @@ export async function createPairingCode(userId: string): Promise<string> {
     });
     return code;
   } catch (e) {
-    console.error('Error creating pairing code:', e);
+    handleFirestoreError(e, OperationType.WRITE, path);
     return `DG-${randomNum}`;
   }
 }
@@ -340,8 +478,9 @@ export async function createPairingCode(userId: string): Promise<string> {
  * Resolve a pairing code on Smartphone to get the PC's linked user session
  */
 export async function resolvePairingCode(code: string): Promise<string | null> {
+  const cleanCode = code.trim().toUpperCase();
+  const path = `pairings/${cleanCode}`;
   try {
-    const cleanCode = code.trim().toUpperCase();
     const pairRef = doc(db, 'pairings', cleanCode);
     const snap = await getDoc(pairRef);
     if (snap.exists()) {
@@ -351,7 +490,7 @@ export async function resolvePairingCode(code: string): Promise<string | null> {
       }
     }
   } catch (e) {
-    console.error('Error resolving pairing code:', e);
+    handleFirestoreError(e, OperationType.GET, path);
   }
   return null;
 }

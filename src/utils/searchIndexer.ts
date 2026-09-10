@@ -108,7 +108,7 @@ export function searchDocumentParagraphs(
   const results: FullTextSearchResult[] = [];
 
   const filteredDocs = documents.filter(
-    (d) => subjectFilter === 'all' || d.subject.toLowerCase() === subjectFilter.toLowerCase()
+    (d) => subjectFilter === 'all' || (d.subject || '').toLowerCase() === (subjectFilter || '').toLowerCase()
   );
 
   filteredDocs.forEach((doc) => {
@@ -137,7 +137,7 @@ export function searchDocumentParagraphs(
       if (matchedCount > 0) {
         const densityScore = (matchedCount / queryTerms.length) * 50;
         const exactPhraseBonus = lowerPara.includes(cleanQuery) ? 35 : 0;
-        const subjectBonus = doc.subject.toLowerCase().includes(cleanQuery) ? 15 : 0;
+        const subjectBonus = (doc.subject || '').toLowerCase().includes(cleanQuery) ? 15 : 0;
         const score = Math.min(100, Math.round(densityScore + exactPhraseBonus + subjectBonus));
 
         // Create contextual snippet

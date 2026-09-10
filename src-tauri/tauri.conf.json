@@ -24,8 +24,8 @@
         "removeFile": true,
         "renameFile": true,
         "scope": [
-          "**",
           "$APP/*",
+          "$APPDATA/*",
           "$DESKTOP/*",
           "$DOCUMENT/*",
           "$DOWNLOAD/*",
@@ -119,30 +119,41 @@
       },
       "resources": [],
       "shortDescription": "Academic study platform with document ingestion and AI summaries",
-      "targets": "all",
+      "targets": ["nsis", "msi"],
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
-        "timestampUrl": ""
+        "timestampUrl": "",
+        "nsis": {
+          "installerIcon": "icons/icon.ico",
+          "installMode": "currentUser",
+          "languages": ["French", "English"],
+          "displayLanguageSelector": true
+        },
+        "wix": {
+          "language": ["fr-FR", "en-US"]
+        }
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self' tauri: 'unsafe-inline' blob: data: https: http:; connect-src 'self' tauri: https: http: wss: ws:; img-src 'self' tauri: blob: data: https:; font-src 'self' tauri: data: https:;"
     },
     "updater": {
       "active": false
     },
     "windows": [
       {
+        "label": "main",
         "center": true,
         "fullscreen": false,
-        "height": 800,
+        "height": 900,
         "maximized": false,
-        "minHeight": 600,
-        "minWidth": 960,
+        "minHeight": 650,
+        "minWidth": 1024,
         "resizable": true,
-        "title": "DegreeUnlocker",
-        "width": 1280
+        "title": "DegreeUnlocker - Plateforme Universitaire & Scolaire",
+        "visible": true,
+        "width": 1440
       }
     ]
   }

@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <title>DegreeUnlocker - Academic Notes & Document Intelligence</title>
-    <meta name="description" content="DegreeUnlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 300+ famous quotes & speeches, and handwriting blocknote companion." />
-    <meta name="theme-color" content="#0f172a" />
+    <title>Degree Unlocker Academy - Academic Excellence & School Curriculum</title>
+    <meta name="description" content="Degree Unlocker Academy: High-performance academic study platform featuring official high school textbooks (Seconde, Première, Terminale), exhaustive language courses, estimated reading times, AI summaries, and handwriting notebook." />
+    <meta name="theme-color" content="#09090b" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="DegreeUnlocker" />
+    <meta name="apple-mobile-web-app-title" content="Degree Unlocker Academy" />
     <meta name="google-site-verification" content="google89c7f392d321d40f" />
-    <meta property="og:title" content="DegreeUnlocker - Academic Notes & Document Intelligence" />
-    <meta property="og:description" content="DegreeUnlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 300+ famous quotes & speeches, and handwriting blocknote companion." />
+    <meta property="og:title" content="Degree Unlocker Academy - Academic Excellence & School Curriculum" />
+    <meta property="og:description" content="Degree Unlocker Academy: High-performance academic study platform featuring official high school textbooks (Seconde, Première, Terminale), exhaustive language courses, estimated reading times, AI summaries, and handwriting notebook." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -24,71 +24,135 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Outfit:wght@400;500;600;700;800&family=Patrick+Hand&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Outfit:wght@400;500;600;700;800&family=Patrick+Hand&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Outfit:wght@400;500;600;700;800&family=Patrick+Hand&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Outfit:wght@400;500;600;700;800&family=Patrick+Hand&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    </noscript>
     <style>
       @keyframes splashProgressNatural {
-        0% { width: 0%; }
-        15% { width: 28%; }
-        35% { width: 58%; }
-        65% { width: 84%; }
-        88% { width: 93%; }
+        0% { width: 15%; }
+        20% { width: 55%; }
+        45% { width: 78%; }
+        70% { width: 89%; }
+        90% { width: 94%; }
         100% { width: 97%; }
       }
       .splash-bar {
-        animation: splashProgressNatural 2.8s cubic-bezier(0.08, 0.82, 0.17, 1) forwards;
-        transition: width 0.12s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease-out;
+        animation: splashProgressNatural 2.2s cubic-bezier(0.1, 0.8, 0.15, 1) forwards;
+        transition: width 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.1s ease-out;
       }
     </style>
   </head>
   <body class="bg-slate-900 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white font-sans">
     <!-- Fast launch splash loader shown while JS bundle initializes -->
-    <div id="app-splash-loader" style="position:fixed;inset:0;background-color:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ffffff;font-family:system-ui,-apple-system,sans-serif;z-index:9999;pointer-events:none;">
-      <div style="width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#1e1b4b);border-radius:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -5px rgba(79,70,229,0.5);margin-bottom:16px;border:1px solid rgba(129,140,248,0.3);">
-        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
-          <path d="M16 6L5 12.5L16 19L27 12.5L16 6Z" fill="#fbbf24"/>
-          <path d="M9 15.5V21.5C9 23.5 12 25 16 25C20 25 23 23.5 23 21.5V15.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-          <path d="M26 13V19.5" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="26" cy="21" r="1.5" fill="#fbbf24"/>
+    <div id="app-splash-loader" style="position:fixed;inset:0;background-color:#09090b;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ffffff;font-family:system-ui,-apple-system,sans-serif;z-index:9999;pointer-events:none;">
+      <div style="width:72px;height:72px;background:linear-gradient(135deg,rgba(245,158,11,0.2),#09090b);border-radius:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -5px rgba(245,158,11,0.3);margin-bottom:16px;border:1px solid rgba(245,158,11,0.4);">
+        <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
+          <path d="M44 14 L47 8 L50 12 L53 8 L56 14 Z" fill="#f59e0b" stroke="#78350f" stroke-width="1"/>
+          <path d="M48 15 C44 15 42 18 42 21 C39 21.5 35 22.5 34 25 C37 25.5 39 25.2 41 25.5 C40 27.5 42 30 46 31 L54 31 C58 30 60 27.5 59 25.5 C61 25.2 63 25.5 66 25 C65 22.5 61 21.5 58 21 C58 18 56 15 48 15 Z" fill="#ffffff" stroke="#1e293b" stroke-width="1.2"/>
+          <path d="M39 22 C34 23 31 25 30 28 C34 28 38 27 40 25.5 Z" fill="#f59e0b"/>
+          <circle cx="43" cy="21" r="1.5" fill="#f59e0b"/>
+          <path d="M45 28 C38 24 25 18 10 20 C6 24 8 32 14 36 C8 37 6 44 12 48 C7 50 6 58 15 60 C24 62 38 52 44 42 Z" fill="#f59e0b" stroke="#78350f" stroke-width="1.2"/>
+          <path d="M55 28 C62 24 75 18 90 20 C94 24 92 32 86 36 C92 37 94 44 88 48 C93 50 94 58 85 60 C76 62 62 52 56 42 Z" fill="#f59e0b" stroke="#78350f" stroke-width="1.2"/>
+          <path d="M44 31 C40 37 39 46 42 56 C45 64 50 68 50 68 C50 68 55 64 58 56 C61 46 60 37 56 31 Z" fill="#ffffff" stroke="#1e293b" stroke-width="1.4"/>
+          <rect x="18" y="70" width="64" height="12" rx="3" fill="#fef3c7" stroke="#78350f" stroke-width="1.4"/>
+          <rect x="47" y="69.5" width="6" height="13" fill="#ef4444" rx="1"/>
+          <circle cx="50" cy="76" r="3.2" fill="#f59e0b"/>
+          <path d="M38 65 C37 68 36 71 36 73 C37 74 39 74 40 72 C41 74 43 74 44 72 C45 74 47 73 47 71 C46 68 44 65 42 64 Z" fill="#f59e0b"/>
+          <path d="M62 65 C63 68 64 71 64 73 C63 74 61 74 60 72 C59 74 57 74 56 72 C55 74 53 73 53 71 C54 68 56 65 58 64 Z" fill="#f59e0b"/>
         </svg>
       </div>
-      <div style="font-size:20px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;color:#f8fafc;">DegreeUnlocker</div>
-      <div style="font-size:12px;color:#a5b4fc;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;margin-bottom:16px;">Lancement rapide...</div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin-bottom:6px;color:#f8fafc;font-family:Georgia,serif;">Degree Unlocker Academy</div>
+      <div style="font-size:11px;color:#f59e0b;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;margin-bottom:16px;">Académie d'Excellence &bull; Lancement rapide...</div>
       
       <!-- Synchronized 100% Responsive Progress Bar -->
       <div style="width:180px;height:4px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden;">
-        <div class="splash-bar" style="height:100%;background:linear-gradient(90deg,#6366f1,#818cf8,#f59e0b);border-radius:99px;"></div>
+        <div class="splash-bar" style="height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24,#ffffff);border-radius:99px;"></div>
       </div>
     </div>
 
     <div id="root"></div>
 
     <script>
-      // Fast dismiss helper for app launch loader - fills progress bar to 100% on React mount before fading out
-      window.dismissSplashLoader = function() {
-        const loader = document.getElementById('app-splash-loader');
-        if (loader) {
-          const bar = loader.querySelector('.splash-bar');
-          if (bar) {
-            bar.style.animation = 'none';
-            bar.style.width = '100%';
+      // Global milestone-based progress updater for real time synchronization
+      window.splashProgress = 15;
+      window.setSplashProgress = function(percent, force) {
+        if (percent > window.splashProgress) {
+          window.splashProgress = percent;
+          const loader = document.getElementById('app-splash-loader');
+          if (loader) {
+            const bar = loader.querySelector('.splash-bar');
+            if (bar) {
+              bar.style.animation = 'none'; // Overrule continuous natural animation
+              bar.style.width = percent + '%';
+            }
           }
-          setTimeout(function() {
+        }
+        if (percent >= 100 || force) {
+          const loader = document.getElementById('app-splash-loader');
+          if (loader) {
+            const bar = loader.querySelector('.splash-bar');
+            if (bar) {
+              bar.style.animation = 'none';
+              bar.style.width = '100%';
+            }
+            // Transition immediately to reduce perceived loading latency
             loader.style.opacity = '0';
-            loader.style.transition = 'opacity 0.15s ease-out';
+            loader.style.transition = 'opacity 0.12s ease-out';
             setTimeout(function() {
               if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
-            }, 150);
-          }, 90);
+            }, 120);
+          }
         }
       };
 
-      // Suppress harmless Vite HMR WebSocket & dev noise
+      // Set initial HTML progress milestones
+      window.setSplashProgress(30);
+      window.addEventListener('DOMContentLoaded', function() {
+        window.setSplashProgress(50);
+      });
+
+      // Backward compatible dismiss helper
+      window.dismissSplashLoader = function() {
+        window.setSplashProgress(100);
+      };
+
+      // Tauri Native PC Launcher Synchronization
+      // Smoothly reveal window once the splash DOM has laid out, eliminating blank white frame stutter
+      (function() {
+        function revealTauriWindow() {
+          try {
+            if (window.__TAURI__ && window.__TAURI__.window && window.__TAURI__.window.appWindow) {
+              window.__TAURI__.window.appWindow.show();
+              window.__TAURI__.window.appWindow.setFocus();
+            }
+          } catch(e) {}
+        }
+        if (typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_IPC__' in window || '__TAURI_METADATA__' in window)) {
+          requestAnimationFrame(function() {
+            revealTauriWindow();
+          });
+          window.addEventListener('DOMContentLoaded', revealTauriWindow);
+          setTimeout(revealTauriWindow, 400);
+        }
+      })();
+
+      // Suppress harmless Vite HMR WebSocket & dev noise, plus benign ResizeObserver alerts
       const origConsoleError = console.error;
       console.error = function(...args) {
         if (args && args[0] && typeof args[0] === 'string' && (args[0].includes('websocket') || args[0].includes('WebSocket') || args[0].includes('HMR'))) {
           return;
         }
         origConsoleError.apply(console, args);
+      };
+
+      const origConsoleWarn = console.warn;
+      console.warn = function(...args) {
+        if (args && args[0] && typeof args[0] === 'string' && (args[0].includes('ResizeObserver loop') || args[0].includes('non-passive event listener') || args[0].includes('Failed to connect to websocket'))) {
+          return;
+        }
+        origConsoleWarn.apply(console, args);
       };
     </script>
     <script type="module" src="/src/main.tsx"></script>

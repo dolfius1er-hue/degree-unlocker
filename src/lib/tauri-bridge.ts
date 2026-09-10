@@ -650,31 +650,52 @@ export const pickAndIngestDesktopDocument = async (
 // ============================================================================
 
 /**
- * Send native OS desktop notification
+ * Send native OS desktop notification with browser permission prompt & fallback
  */
 export const sendDesktopNotification = async (title: string, body: string): Promise<boolean> => {
+  let nativeSuccess = false;
+
   if (!isTauri()) {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/icon-192.png' });
-      return true;
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        let perm = Notification.permission;
+        if (perm === 'default') {
+          perm = await Notification.requestPermission();
+        }
+        if (perm === 'granted') {
+          new Notification(title, { body, icon: '/icon-192.png' });
+          nativeSuccess = true;
+        }
+      } catch (err) {
+        console.warn('[TauriBridge] Browser notification blocked or iframe restricted:', err);
+      }
     }
-    return false;
+  } else {
+    try {
+      let hasPermission = await isPermissionGranted();
+      if (!hasPermission) {
+        const permission = await requestPermission();
+        hasPermission = permission === 'granted';
+      }
+      if (hasPermission) {
+        sendNotification({ title, body, icon: 'icon' });
+        nativeSuccess = true;
+      }
+    } catch (err) {
+      console.warn('[TauriBridge] Tauri notification error:', err);
+    }
   }
-  try {
-    let hasPermission = await isPermissionGranted();
-    if (!hasPermission) {
-      const permission = await requestPermission();
-      hasPermission = permission === 'granted';
-    }
-    if (hasPermission) {
-      sendNotification({ title, body, icon: 'icon' });
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.warn('[TauriBridge] notification error:', err);
-    return false;
+
+  // Always dispatch in-app notification event as backup/fallback for iframe or denied browser permissions
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('inAppNotificationToast', {
+        detail: { title, body, nativeSuccess }
+      })
+    );
   }
+
+  return nativeSuccess;
 };
 
 /**

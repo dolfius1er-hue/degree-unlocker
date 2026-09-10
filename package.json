@@ -1,7 +1,10 @@
 {
-  "name": "react-example",
+  "name": "degreeunlocker",
+  "productName": "DegreeUnlocker",
+  "description": "DegreeUnlocker Standalone Academic Desktop Application",
+  "author": "DegreeUnlocker",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -11,7 +14,8 @@
     "lint": "tsc --noEmit",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "electron:build:win": "electron-builder --config electron-builder.json --config.electronVersion=28.2.0"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -25,11 +29,13 @@
     "firebase": "^12.18.0",
     "google-tts-api": "^2.0.2",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.546.0",
     "mammoth": "^1.12.2",
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "react-markdown": "^10.1.0",
     "vite": "^6.2.3",
     "xlsx": "^0.18.5"
   },
@@ -43,6 +49,7 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "vite-plugin-pwa": "^1.3.0"
   }
 }

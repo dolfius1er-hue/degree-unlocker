@@ -1,6 +1,6 @@
 {
-  "name": "Degree Unlocker",
-  "description": "Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, 300+ famous quotes & speeches, and handwriting blocknote companion.",
+  "name": "Degree Unlocker Academy",
+  "description": "Degree Unlocker Academy: High-performance academic study platform featuring official high school textbooks (Seconde, Première, Terminale), exhaustive language courses, estimated reading times, AI summaries, and handwriting notebook.",
   "requestFramePermissions": [
     "camera",
     "microphone"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppLanguage, AppTheme, MenuPosition, UIPreferences } from '../types';
+import { AppLanguage, AppTheme, MenuPosition, UIPreferences, NavTabType } from '../types';
 import { isTauri } from '../lib/tauri-bridge';
+import { AppLogo } from './AppLogo';
 import { 
   GraduationCap, 
   Folder, 
@@ -41,21 +42,13 @@ import {
   Monitor,
   X,
   Crown,
-  Landmark
+  Landmark,
+  Globe,
+  Laptop
 } from 'lucide-react';
+import { useDownloadWindowsExe } from '../hooks/useDownloadWindowsExe';
 
-export type NavTabType = 
-  | 'dashboard' 
-  | 'library' 
-  | 'school_books'
-  | 'search' 
-  | 'resumer' 
-  | 'blocknote' 
-  | 'quotes' 
-  | 'flashcards' 
-  | 'quiz' 
-  | 'bilingual' 
-  | 'database';
+export type { NavTabType };
 
 interface SidebarProps {
   activeTab: NavTabType;
@@ -68,6 +61,7 @@ interface SidebarProps {
   onOpenVideos: () => void;
   onOpenTips: () => void;
   onOpenPreferences: () => void;
+  onOpenCredits?: () => void;
   onOpenBackup?: () => void;
   onOpenCoach?: () => void;
   onOpenPhotoScanner?: () => void;
@@ -76,6 +70,7 @@ interface SidebarProps {
   onOpenOneDrive?: () => void;
   onOpenGoogleWorkspace?: () => void;
   onOpenPrivacy?: () => void;
+  onOpenNotionExercises?: (subject?: string) => void;
   onFilterSubject?: (subject: string) => void;
   totalDocs: number;
   lang: AppLanguage;
@@ -85,6 +80,8 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   activeTheme?: AppTheme;
+  isOpen?: boolean;
+  onClose?: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
   onInstallPwa?: () => void;
@@ -285,6 +282,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   onOpenVideos,
   onOpenTips,
   onOpenPreferences,
+  onOpenCredits,
   onOpenBackup,
   onOpenCoach,
   onOpenPhotoScanner,
@@ -293,6 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   onOpenOneDrive,
   onOpenGoogleWorkspace,
   onOpenPrivacy,
+  onOpenNotionExercises,
   onFilterSubject,
   totalDocs,
   lang,
@@ -302,29 +301,35 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   collapsed,
   onToggleCollapsed,
   activeTheme = 'light',
+  isOpen,
+  onClose,
   isMobileOpen = false,
   onCloseMobile,
   onInstallPwa,
   isPwaInstalled = false,
   onSelectQuotesCategory,
 }) => {
+  const { isDownloadingExe, downloadWindowsExe } = useDownloadWindowsExe();
+  const isShown = isOpen ?? isMobileOpen;
+  const handleClose = onClose || onCloseMobile;
+
   const handleTabClick = useCallback((tab: NavTabType) => {
     setActiveTab(tab);
-    onCloseMobile?.();
-  }, [setActiveTab, onCloseMobile]);
+    handleClose?.();
+  }, [setActiveTab, handleClose]);
 
   const handleSelectSubject = useCallback((subj: string) => {
     if (onFilterSubject) {
       onFilterSubject(subj);
     }
     setActiveTab('library');
-    onCloseMobile?.();
-  }, [onFilterSubject, setActiveTab, onCloseMobile]);
+    handleClose?.();
+  }, [onFilterSubject, setActiveTab, handleClose]);
 
   const wrapAction = useCallback((action?: () => void) => () => {
     action?.();
-    onCloseMobile?.();
-  }, [onCloseMobile]);
+    handleClose?.();
+  }, [handleClose]);
 
   const [isQuotesSubnavOpen, setIsQuotesSubnavOpen] = useState(false);
   const dynamicSubjects = Object.keys(subjectCounts);
@@ -340,17 +345,17 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   return (
     <>
       {/* Mobile Backdrop */}
-      {isMobileOpen && (
+      {isShown && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-200"
-          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-150"
+          onClick={handleClose}
           aria-hidden="true"
         />
       )}
 
       <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] transform transition-transform duration-200 ease-in-out md:static md:translate-x-0 md:h-[100dvh] md:sticky md:top-0 md:shrink-0 flex flex-col ${sidebarThemeClass} select-none shadow-2xl md:shadow-none ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] transform transition-transform duration-200 ease-in-out md:static md:h-[100dvh] md:sticky md:top-0 md:shrink-0 flex flex-col ${sidebarThemeClass} select-none shadow-2xl md:shadow-none ${
+          isShown ? 'translate-x-0' : '-translate-x-full md:hidden'
         } ${
           collapsed ? 'md:w-[72px]' : 'md:w-[240px] lg:w-[280px]'
         }`}
@@ -362,46 +367,41 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               onClick={() => handleTabClick('dashboard')}
               className="flex items-center gap-2.5 text-left group overflow-hidden cursor-pointer min-w-0"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 border border-indigo-400/40 flex items-center justify-center text-white shadow-md shadow-indigo-950/50 group-hover:scale-105 transition-transform shrink-0">
-                <GraduationCap className="w-5 h-5 text-amber-300" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-amber-500/20 via-slate-900 to-black border border-amber-400/40 flex items-center justify-center text-white shadow-md shadow-amber-950/40 group-hover:scale-105 transition-transform shrink-0">
+                <AppLogo size="sm" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="block font-extrabold text-sm tracking-tight text-white group-hover:text-indigo-300 transition-colors truncate">
-                  Degree Unlocker
+                <span className="font-extrabold text-xs sm:text-sm tracking-tight text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5 min-w-0">
+                  <span className="truncate font-serif tracking-wide">Degree Unlocker Academy</span>
                 </span>
-                <p className="block text-[10px] text-slate-400 truncate">
-                  {lang === 'fr' ? 'Espace d\'Étude & Révision' : 'Academic Study Hub'}
+                <p className="block text-[10px] text-amber-300/80 font-medium truncate">
+                  {lang === 'fr' ? 'Académie d\'Excellence & Révision' : 'Academy of Academic Excellence'}
                 </p>
               </div>
             </button>
           ) : (
             <button 
               onClick={() => handleTabClick('dashboard')}
-              className="w-10 h-10 mx-auto rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md hover:bg-indigo-500 transition-colors shrink-0 cursor-pointer"
-              title="Degree Unlocker"
+              className="w-10 h-10 mx-auto rounded-xl bg-gradient-to-b from-amber-500/20 via-slate-900 to-black border border-amber-400/40 flex items-center justify-center text-white shadow-md hover:border-amber-400 transition-colors shrink-0 cursor-pointer"
+              title="Degree Unlocker Academy"
             >
-              <GraduationCap className="w-5 h-5 text-amber-300" />
+              <AppLogo size="sm" />
             </button>
           )}
 
-          {/* Controls: Close for mobile, collapse toggle for desktop */}
-          <div className="flex items-center shrink-0">
-            {onCloseMobile && (
+          {/* Controls: Close / Collapse toggle */}
+          <div className="flex items-center shrink-0 gap-1">
+            {handleClose && (
               <button
-                onClick={onCloseMobile}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors md:hidden cursor-pointer"
-                title={lang === 'fr' ? 'Fermer le menu' : 'Close menu'}
+                id="btn-sidebar-close"
+                onClick={handleClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+                title={lang === 'fr' ? 'Masquer le menu sur le côté' : 'Hide sidebar'}
+                aria-label="Fermer le menu"
               >
-                <X className="w-5 h-5 text-slate-300" />
+                <PanelLeftClose className="w-5 h-5 text-slate-300" />
               </button>
             )}
-            <button
-              onClick={onToggleCollapsed}
-              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors items-center justify-center cursor-pointer"
-              title={collapsed ? (lang === 'fr' ? 'Agrandir le menu' : 'Expand sidebar') : (lang === 'fr' ? 'Réduire le menu (plein écran)' : 'Collapse sidebar (full screen)')}
-            >
-              {collapsed ? <PanelLeftOpen className="w-5 h-5 text-indigo-400" /> : <PanelLeftClose className="w-5 h-5" />}
-            </button>
           </div>
         </div>
 
@@ -532,6 +532,35 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               title={lang === 'fr' ? 'Bibliothèque de Manuels & Exercices' : 'School Textbooks & Exercises'}
             />
 
+            {onOpenNotionExercises && (
+              <button
+                id="btn-sidebar-notion-exercises"
+                onClick={wrapAction(() => onOpenNotionExercises())}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-amber-300 hover:bg-amber-500/20 hover:text-white border border-amber-500/30 transition-all cursor-pointer shadow-xs group"
+                title={lang === 'fr' ? 'Exercices Notion Indépendants (Espagnol, Allemand, Latin...)' : 'Independent Notion Exercises'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <span className="text-sm shrink-0">📓</span>
+                  {!collapsed && <span className="truncate font-bold">{lang === 'fr' ? 'Exercices Notion' : 'Notion Drills'}</span>}
+                </div>
+                {!collapsed && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 font-mono">
+                    {lang === 'fr' ? 'Indépendant' : 'New'}
+                  </span>
+                )}
+              </button>
+            )}
+
+            <NavItem
+              icon={<Search className="w-4 h-4 text-cyan-400 shrink-0" />}
+              label={lang === 'fr' ? 'Recherche & Indexation IA' : 'AI Search & Index'}
+              isActive={activeTab === 'search'}
+              onClick={() => handleTabClick('search')}
+              collapsed={collapsed}
+              activeColorClass="bg-cyan-600 text-white font-bold shadow-sm"
+              title={lang === 'fr' ? 'Recherche Plein Texte & Sémantique IA' : 'Semantic & Full-Text AI Search'}
+            />
+
             <NavItem
               icon={<Sparkles className="w-4 h-4 text-fuchsia-400 shrink-0" />}
               label={lang === 'fr' ? 'Résumés & Sources' : 'Summaries & Sources'}
@@ -603,6 +632,53 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                 {!collapsed && <span className="truncate">{lang === 'fr' ? 'Coach Socratique IA' : 'Socratic Coach'}</span>}
               </button>
             )}
+          </nav>
+        </div>
+
+        {/* SECTION 2.5: GRANDES LANGUES & HUMANITÉS (Collège → Lycée) */}
+        <div>
+          <SectionDivider
+            title={lang === 'fr' ? 'Langues & Humanités' : 'Languages & Humanities'}
+            collapsed={collapsed}
+            icon={<Globe className="w-3.5 h-3.5 text-emerald-400" />}
+          />
+          <nav className="space-y-0.5">
+            <NavItem
+              icon={<span className="text-sm shrink-0">🇬🇧</span>}
+              label={lang === 'fr' ? 'Anglais (Mots & Notes)' : 'English (Words & Notes)'}
+              isActive={activeTab === 'english'}
+              onClick={() => handleTabClick('english')}
+              collapsed={collapsed}
+              activeColorClass="bg-blue-600 text-white font-bold shadow-sm"
+              title={lang === 'fr' ? 'Anglais : Mots Prioritaires & Notes de Cours' : 'English Priority Words & Notes'}
+            />
+            <NavItem
+              icon={<span className="text-sm shrink-0">🇪🇸</span>}
+              label={lang === 'fr' ? 'Espagnol (5e - Tale)' : 'Spanish (5th - 12th)'}
+              isActive={activeTab === 'spanish'}
+              onClick={() => handleTabClick('spanish')}
+              collapsed={collapsed}
+              activeColorClass="bg-amber-600 text-white font-bold shadow-sm"
+              title={lang === 'fr' ? 'Cours Complet d\'Espagnol Collège-Lycée' : 'Comprehensive Spanish Course'}
+            />
+            <NavItem
+              icon={<span className="text-sm shrink-0">🇩🇪</span>}
+              label={lang === 'fr' ? 'Allemand (5e - Tale)' : 'German (5th - 12th)'}
+              isActive={activeTab === 'german'}
+              onClick={() => handleTabClick('german')}
+              collapsed={collapsed}
+              activeColorClass="bg-yellow-600 text-white font-bold shadow-sm"
+              title={lang === 'fr' ? 'Cours Complet d\'Allemand Collège-Lycée' : 'Comprehensive German Course'}
+            />
+            <NavItem
+              icon={<span className="text-sm shrink-0">🏛️</span>}
+              label={lang === 'fr' ? 'Latin & Grec (Antiquité)' : 'Latin & Greek'}
+              isActive={activeTab === 'latin'}
+              onClick={() => handleTabClick('latin')}
+              collapsed={collapsed}
+              activeColorClass="bg-emerald-600 text-white font-bold shadow-sm"
+              title={lang === 'fr' ? 'Langues et Cultures de l\'Antiquité' : 'Classical Antiquity Languages'}
+            />
           </nav>
         </div>
 
@@ -798,15 +874,38 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               </button>
             )}
 
-            {/* Download / Install App (Dual Native PC & PWA Hub) */}
+            {/* Download Windows Exe (.exe) Direct Button */}
+            <button
+              onClick={() => downloadWindowsExe()}
+              disabled={isDownloadingExe}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-black transition-all bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-extrabold shadow-md border border-amber-300 cursor-pointer mt-1.5 disabled:opacity-50"
+              title={lang === 'fr' ? 'Télécharger DegreeUnlocker pour Windows (.exe)' : 'Download DegreeUnlocker for Windows (.exe)'}
+            >
+              <Laptop className="w-4 h-4 text-slate-950 shrink-0 stroke-[2.5]" />
+              {!collapsed && <span className="truncate">{isDownloadingExe ? (lang === 'fr' ? 'TÉLÉCHARGEMENT...' : 'DOWNLOADING...') : (lang === 'fr' ? '💻 Télécharger .exe Windows' : '💻 Download .exe Windows')}</span>}
+            </button>
+
+            {/* Show Credits & Creators Button */}
+            {onOpenCredits && (
+              <button
+                onClick={wrapAction(onOpenCredits)}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-amber-300 hover:bg-amber-950/50 hover:text-amber-200 border border-amber-400/30 transition-all cursor-pointer mt-1"
+                title={lang === 'fr' ? 'Voir les crédits & créateurs (Dolfius 1er, L0fya, Black2Myth...)' : 'Show Credits & Creators'}
+              >
+                <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Crédits & Générique' : 'Show Credits'}</span>}
+              </button>
+            )}
+
+            {/* PWA / App Install Guide Button */}
             {onInstallPwa && (
               <button
                 onClick={wrapAction(onInstallPwa)}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-amber-500 via-amber-600 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-extrabold shadow-md border border-amber-400/50 cursor-pointer mt-1.5"
-                title={lang === 'fr' ? 'Installer sur PC (Micro-version Native ou PWA Web)' : 'Install on PC (Native Desktop or PWA)'}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-300 hover:bg-white/10 hover:text-white cursor-pointer mt-1"
+                title={lang === 'fr' ? 'Guide PWA & Mobile' : 'PWA & Mobile Guide'}
               >
-                <Download className="w-4 h-4 text-slate-950 shrink-0 stroke-[2.5]" />
-                {!collapsed && <span className="truncate">{lang === 'fr' ? '🖥️ Installer sur PC' : '🖥️ Install on PC'}</span>}
+                <Download className="w-4 h-4 text-indigo-400 shrink-0 stroke-[2]" />
+                {!collapsed && <span className="truncate">{lang === 'fr' ? 'Guide d\'installation' : 'Installation Guide'}</span>}
               </button>
             )}
           </nav>

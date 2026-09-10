@@ -1,0 +1,160 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/v1/tooling/cli/schema.json",
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devPath": "http://localhost:3000",
+    "distDir": "./dist"
+  },
+  "package": {
+    "productName": "DegreeUnlocker",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "fs": {
+        "all": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "copyFile": true,
+        "createDir": true,
+        "removeDir": true,
+        "removeFile": true,
+        "renameFile": true,
+        "scope": [
+          "$APP/*",
+          "$APPDATA/*",
+          "$DESKTOP/*",
+          "$DOCUMENT/*",
+          "$DOWNLOAD/*",
+          "$RESOURCE/*"
+        ]
+      },
+      "dialog": {
+        "all": true,
+        "open": true,
+        "save": true,
+        "message": true,
+        "ask": true,
+        "confirm": true
+      },
+      "path": {
+        "all": true
+      },
+      "protocol": {
+        "all": true,
+        "asset": true,
+        "assetScope": ["**"]
+      },
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": [
+          "https://**",
+          "http://**"
+        ]
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "clipboard": {
+        "all": true,
+        "readText": true,
+        "writeText": true
+      },
+      "notification": {
+        "all": true
+      },
+      "window": {
+        "all": true,
+        "close": true,
+        "hide": true,
+        "maximize": true,
+        "minimize": true,
+        "print": true,
+        "setAlwaysOnTop": true,
+        "setDecorations": true,
+        "setFocus": true,
+        "setFullscreen": true,
+        "setIcon": true,
+        "setMaxSize": true,
+        "setMinSize": true,
+        "setPosition": true,
+        "setResizable": true,
+        "setSize": true,
+        "setTitle": true,
+        "show": true,
+        "startDragging": true,
+        "unmaximize": true,
+        "unminimize": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "Education",
+      "copyright": "DegreeUnlocker Team",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "public/icons/32x32.png",
+        "public/icons/128x128.png",
+        "public/icons/128x128@2x.png",
+        "public/icons/icon.icns",
+        "public/icons/icon.ico"
+      ],
+      "identifier": "com.degreeunlocker.app",
+      "longDescription": "Degree Unlocker: Academic study platform with multi-format document ingestion (PDF, Word, Excel, Google Docs), AI summaries, semantic search, and handwriting blocknote companion.",
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "providerShortName": null,
+        "entitlements": null
+      },
+      "resources": [],
+      "shortDescription": "Academic study platform with document ingestion and AI summaries",
+      "targets": ["nsis", "msi"],
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": "",
+        "nsis": {
+          "installerIcon": "public/favicon.ico",
+          "installMode": "currentUser",
+          "languages": ["French", "English"],
+          "displayLanguageSelector": true
+        },
+        "wix": {
+          "language": ["fr-FR", "en-US"]
+        }
+      }
+    },
+    "security": {
+      "csp": "default-src 'self' tauri: 'unsafe-inline' blob: data: https: http:; connect-src 'self' tauri: https: http: wss: ws:; img-src 'self' tauri: blob: data: https:; font-src 'self' tauri: data: https:;"
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "label": "main",
+        "center": true,
+        "fullscreen": false,
+        "height": 900,
+        "maximized": false,
+        "minHeight": 650,
+        "minWidth": 1024,
+        "resizable": true,
+        "title": "DegreeUnlocker - Plateforme Universitaire & Scolaire",
+        "visible": true,
+        "width": 1440
+      }
+    ]
+  }
+}
