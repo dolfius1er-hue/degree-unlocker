@@ -17,7 +17,9 @@ import {
   MousePointer,
   Download,
   Share2,
-  CheckCheck
+  CheckCheck,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { 
   isTauri, 
@@ -28,6 +30,7 @@ import {
 } from '../utils/tauri';
 import { AppLanguage, AppTheme } from '../types';
 import { DesktopContextualCursor } from './DesktopContextualCursor';
+import { soundFx } from '../utils/soundEffects';
 
 interface DesktopLayoutWrapperProps {
   children: ReactNode;
@@ -79,9 +82,16 @@ export const DesktopLayoutWrapper: React.FC<DesktopLayoutWrapperProps> = ({
     }
   });
 
+  const [isFxEnabled, setIsFxEnabled] = useState<boolean>(() => soundFx.isEnabled());
+
   const toggleHardcoreOnyx = () => {
     setIsHardcoreOnyx(prev => {
       const next = !prev;
+      if (next) {
+        soundFx.playLockIn();
+      } else {
+        soundFx.playSwitch();
+      }
       try {
         localStorage.setItem('degreelocker_pc_hardcore', String(next));
       } catch {}
@@ -285,6 +295,29 @@ export const DesktopLayoutWrapper: React.FC<DesktopLayoutWrapperProps> = ({
               >
                 <Zap className={`w-3.5 h-3.5 ${isHardcoreOnyx ? 'text-amber-400 fill-amber-400' : 'text-slate-400'}`} />
                 <span className="hidden sm:inline">{isHardcoreOnyx ? 'Hardcore mode DegreeUnlocker' : 'Normal mode DegreeUnlocker'}</span>
+              </button>
+
+              {/* Sound FX Audio Toggle */}
+              <button
+                id="btn-desktop-sound-fx-toggle"
+                onClick={() => {
+                  const next = soundFx.toggleSound();
+                  setIsFxEnabled(next);
+                  if (next) soundFx.playChime();
+                }}
+                className={`h-7 px-2 flex items-center gap-1 text-[11px] transition-all rounded-md cursor-pointer ${
+                  isFxEnabled
+                    ? 'text-amber-400 hover:bg-amber-400/10'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/10'
+                }`}
+                title={lang === 'fr' ? (isFxEnabled ? 'Sons tactiles & Audio activés' : 'Sons désactivés') : (isFxEnabled ? 'Tactile Audio FX ON' : 'Audio FX OFF')}
+              >
+                {isFxEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 text-slate-500" />
+                )}
+                <span className="hidden xl:inline text-[10px] font-mono">{isFxEnabled ? 'FX' : 'MUTED'}</span>
               </button>
 
               {/* Window Frame Mode Toggle for previewers */}

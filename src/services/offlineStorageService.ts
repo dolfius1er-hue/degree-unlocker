@@ -295,6 +295,46 @@ class OfflineStorageService {
   }
 
   // -------------------------------------------------------------
+  // QUIZ RESULTS PERSISTENCE
+  // -------------------------------------------------------------
+
+  public async saveQuizResult(record: QuizScoreRecord): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORES.QUIZ_RESULTS, 'readwrite');
+        const store = tx.objectStore(STORES.QUIZ_RESULTS);
+        const req = store.put(record);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      console.warn('[IndexedDB] Error saving quiz result:', err);
+    }
+  }
+
+  public async getAllQuizResults(): Promise<QuizScoreRecord[]> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORES.QUIZ_RESULTS, 'readonly');
+        const store = tx.objectStore(STORES.QUIZ_RESULTS);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const list = (req.result || []) as QuizScoreRecord[];
+          // sort descending by timestamp
+          list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          resolve(list);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      console.warn('[IndexedDB] Error fetching quiz results:', err);
+      return [];
+    }
+  }
+
+  // -------------------------------------------------------------
   // METADATA & OFFLINE SYNC TIMESTAMPS
   // -------------------------------------------------------------
 
@@ -671,19 +711,21 @@ class OfflineStorageService {
       const docs = await this.getAllDocuments();
       const flashcards = await this.getAllFlashcards();
       const vocab = await this.getAllVocabulary();
+      const quizzes = await this.getAllQuizResults();
       const queue = await this.getPendingQueue();
 
       const totalChars = 
         JSON.stringify(docs).length + 
         JSON.stringify(flashcards).length + 
         JSON.stringify(vocab).length + 
+        JSON.stringify(quizzes).length +
         JSON.stringify(queue).length;
 
       return {
         docCount: docs.length,
         flashcardCount: flashcards.length,
         vocabularyCount: vocab.length,
-        quizCount: 0,
+        quizCount: quizzes.length,
         queueCount: queue.length,
         estimatedSizeKb: Math.round((totalChars * 2) / 1024)
       };

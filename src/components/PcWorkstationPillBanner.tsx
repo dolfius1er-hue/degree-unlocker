@@ -29,6 +29,7 @@ import {
   Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { soundFx } from '../utils/soundEffects';
 
 export type SessionMode = 'hardcore' | 'detente' | 'facile';
 
@@ -55,6 +56,7 @@ interface PcWorkstationPillBannerProps {
   lang: AppLanguage;
   onLaunchRevision?: () => void;
   onOpenInstallGuide?: () => void;
+  onOpenSoundHUD?: () => void;
   className?: string;
 }
 
@@ -502,6 +504,7 @@ export const PcWorkstationPillBanner: React.FC<PcWorkstationPillBannerProps> = (
   lang,
   onLaunchRevision,
   onOpenInstallGuide,
+  onOpenSoundHUD,
   className = '',
 }) => {
   const gradientId = useId();
@@ -660,7 +663,10 @@ export const PcWorkstationPillBanner: React.FC<PcWorkstationPillBannerProps> = (
               {models.map((m, idx) => (
                 <button
                   key={m.id}
-                  onClick={() => setSelectedModelIdx(idx)}
+                  onClick={() => {
+                    soundFx.playClick(900 + idx * 60);
+                    setSelectedModelIdx(idx);
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                     selectedModelIdx === idx
                       ? 'bg-amber-500 text-black shadow-md font-extrabold scale-105'
@@ -720,7 +726,14 @@ export const PcWorkstationPillBanner: React.FC<PcWorkstationPillBannerProps> = (
                 return (
                   <button
                     key={modeKey}
-                    onClick={() => setSelectedSessionMode(modeKey)}
+                    onClick={() => {
+                      if (modeKey === 'hardcore') {
+                        soundFx.playLockIn();
+                      } else {
+                        soundFx.playSwitch();
+                      }
+                      setSelectedSessionMode(modeKey);
+                    }}
                     className={`p-2.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                       isActive
                         ? `${conf.borderColor} bg-black/80 shadow-lg`
@@ -834,7 +847,10 @@ export const PcWorkstationPillBanner: React.FC<PcWorkstationPillBannerProps> = (
           <div className="flex flex-wrap items-center gap-3 pt-1">
             {onLaunchRevision && (
               <button
-                onClick={onLaunchRevision}
+                onClick={() => {
+                  soundFx.playSuccess();
+                  onLaunchRevision();
+                }}
                 className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs transition-all shadow-lg shadow-amber-500/20 cursor-pointer flex items-center gap-2"
               >
                 <Zap className="w-4 h-4 fill-black" />
@@ -848,16 +864,36 @@ export const PcWorkstationPillBanner: React.FC<PcWorkstationPillBannerProps> = (
             )}
 
             <button
-              onClick={() => setSelectedModelIdx((prev) => (prev + 1) % models.length)}
+              onClick={() => {
+                soundFx.playClick(900);
+                setSelectedModelIdx((prev) => (prev + 1) % models.length);
+              }}
               className="px-3.5 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold text-xs transition-colors border border-zinc-700 cursor-pointer flex items-center gap-1.5"
             >
               <Sliders className="w-3.5 h-3.5 text-amber-400" />
               <span>{lang === 'fr' ? 'Changer de Modèle (1-3)' : 'Switch Model (1-3)'}</span>
             </button>
 
+            {onOpenSoundHUD && (
+              <button
+                onClick={() => {
+                  soundFx.playClick(850);
+                  onOpenSoundHUD();
+                }}
+                className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-indigo-600/30 to-amber-500/20 hover:from-amber-500/35 hover:to-indigo-500/40 text-amber-300 font-bold text-xs transition-all border border-amber-400/40 cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-500/10 group"
+                title={lang === 'fr' ? 'Activer le Studio Audio & Fréquences Alpha/Thêta' : 'Activate Quantum Focus Audio Studio'}
+              >
+                <Headphones className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform animate-pulse" />
+                <span>{lang === 'fr' ? 'Studio Focus 🎧' : 'Focus Studio 🎧'}</span>
+              </button>
+            )}
+
             {onOpenInstallGuide && (
               <button
-                onClick={onOpenInstallGuide}
+                onClick={() => {
+                  soundFx.playClick(750);
+                  onOpenInstallGuide();
+                }}
                 className="px-3.5 py-2.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-bold text-xs transition-all border border-indigo-400/40 cursor-pointer flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
                 title={lang === 'fr' ? 'Télécharger le Launcher PC Tauri / PWA' : 'Download PC Tauri / PWA Launcher'}
               >

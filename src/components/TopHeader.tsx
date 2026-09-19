@@ -42,6 +42,7 @@ import {
   Info
 } from 'lucide-react';
 import { isTauri, minimizeWindow, toggleMaximizeWindow, closeWindow, isWindowMaximized, handleHeaderMouseDown } from '../utils/tauri';
+import { soundFx } from '../utils/soundEffects';
 
 interface TopHeaderProps {
   onSearchClick: () => void;
@@ -59,6 +60,7 @@ interface TopHeaderProps {
   onOpenKeyboardShortcuts?: () => void;
   onOpenInstallGuide?: () => void;
   onOpenSyncManager?: () => void;
+  onOpenSoundHUD?: () => void;
   isPwaInstalled?: boolean;
   currentUser?: any;
   isSyncing?: boolean;
@@ -91,6 +93,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenKeyboardShortcuts,
   onOpenInstallGuide,
   onOpenSyncManager,
+  onOpenSoundHUD,
   isPwaInstalled = false,
   currentUser,
   isSyncing = false,
@@ -257,6 +260,22 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           
           {/* Integrated Pomodoro Focus Timer */}
           <FocusPomodoroTimer lang={lang} />
+
+          {/* Quantum Studio & Focus Soundscape Button */}
+          {onOpenSoundHUD && (
+            <button
+              id="btn-sound-hud-topheader"
+              onClick={() => {
+                soundFx.playClick(850);
+                onOpenSoundHUD();
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-indigo-500/15 to-amber-500/15 hover:from-amber-500/25 hover:to-indigo-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95 group"
+              title={lang === 'fr' ? 'Ouvrir le Studio Quantique (Ondes Alpha, Thêta, Pluie & Synthétiseur)' : 'Open Quantum Focus Audio Studio'}
+            >
+              <Headphones className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline font-mono tracking-tight font-black">FLOW 🎧</span>
+            </button>
+          )}
 
           {/* Importer Document Button with hover tooltip */}
           <div className="relative">

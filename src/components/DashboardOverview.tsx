@@ -51,9 +51,11 @@ import {
   Crown,
   Server,
   RefreshCw,
-  Target
+  Target,
+  Headphones
 } from 'lucide-react';
 import { useDownloadWindowsExe } from '../hooks/useDownloadWindowsExe';
+import { soundFx } from '../utils/soundEffects';
 
 interface DashboardOverviewProps {
   documents: SchoolDocument[];
@@ -70,6 +72,7 @@ interface DashboardOverviewProps {
   onQuickCreatePinnedNote?: (note: Partial<SchoolDocument>) => Promise<SchoolDocument | void>;
   onOpenInstallGuide?: () => void;
   onOpenSyncManager?: () => void;
+  onOpenSoundHUD?: () => void;
   lang: AppLanguage;
   activeTheme?: AppTheme;
 }
@@ -178,6 +181,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onQuickCreatePinnedNote,
   onOpenInstallGuide,
   onOpenSyncManager,
+  onOpenSoundHUD,
   lang = 'fr',
   activeTheme = 'light',
 }) => {
@@ -577,6 +581,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <Plus className="w-4 h-4 text-indigo-400" />
                 <span>{lang === 'fr' ? 'Créer une Fiche' : 'Create Card'}</span>
               </button>
+
+              {onOpenSoundHUD && (
+                <button
+                  onClick={() => {
+                    soundFx.playClick(850);
+                    onOpenSoundHUD();
+                  }}
+                  className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/25 via-indigo-600/30 to-amber-500/20 hover:from-amber-500/35 hover:to-indigo-500/40 text-amber-300 border border-amber-400/50 font-black text-xs sm:text-sm inline-flex items-center gap-2.5 transition-all shadow-lg hover:shadow-amber-500/20 active:scale-95 cursor-pointer group"
+                  title={lang === 'fr' ? 'Activer le Studio Audio Focus (Ondes Alpha, Thêta, Pluie & Synthétiseur)' : 'Activate Quantum Focus Audio Studio'}
+                >
+                  <Headphones className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform animate-pulse" />
+                  <span>{lang === 'fr' ? 'Studio Focus 🎧' : 'Focus Studio 🎧'}</span>
+                </button>
+              )}
 
               {onOpenSyncManager && (
                 <button

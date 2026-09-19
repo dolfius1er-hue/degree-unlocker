@@ -57,6 +57,7 @@ import { NotionSubjectKey } from './components/NotionSubjectWorkspaceModal';
 const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })));
 const AppUpdateManager = lazy(() => import('./components/AppUpdateManager').then(m => ({ default: m.AppUpdateManager })));
 const OfflineIndicator = lazy(() => import('./components/OfflineIndicator').then(m => ({ default: m.OfflineIndicator })));
+const CyberSoundscapeHUD = lazy(() => import('./components/CyberSoundscapeHUD').then(m => ({ default: m.CyberSoundscapeHUD })));
 
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { DesktopLayoutWrapper } from './components/DesktopLayoutWrapper';
@@ -65,6 +66,7 @@ import { LockInWorkstationHub } from './components/LockInWorkstationHub';
 import { offlineStorageService } from './services/offlineStorageService';
 import { isTauri, showWindow } from './lib/tauri-bridge';
 import { useTauriDesktopWorkstation } from './hooks/useTauriDesktopWorkstation';
+import { soundFx } from './utils/soundEffects';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   onAuthChange, 
@@ -86,6 +88,27 @@ export default function App() {
 
   // Deterministic initial state for zero-warning React hydration
   const [activeTab, setActiveTab] = useState<NavTabType>('dashboard');
+  
+  // Cyber Focus & Ambient Sound Studio State
+  const [isSoundHUDOpen, setIsSoundHUDOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('degreelocker_sound_hud_open');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSoundHUD = () => {
+    soundFx.playClick(900);
+    setIsSoundHUDOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('degreelocker_sound_hud_open', String(next));
+      } catch {}
+      return next;
+    });
+  };
   
   // Persist activeTab whenever it changes
   useEffect(() => {
@@ -1366,6 +1389,7 @@ export default function App() {
           onOpenKeyboardShortcuts={() => setIsKeyboardShortcutsOpen(true)}
           onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
           onOpenSyncManager={() => setIsSyncManagerOpen(true)}
+          onOpenSoundHUD={toggleSoundHUD}
           isPwaInstalled={isPwaInstalled}
           currentUser={currentUser}
           lang={lang}
@@ -1481,6 +1505,7 @@ export default function App() {
                         }
                       }}
                       onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
+                      onOpenSoundHUD={toggleSoundHUD}
                     />
                   </>
                 )}
@@ -1511,6 +1536,7 @@ export default function App() {
                   onQuickCreatePinnedNote={handleQuickCreatePinnedNote}
                   onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
                   onOpenSyncManager={() => setIsSyncManagerOpen(true)}
+                  onOpenSoundHUD={toggleSoundHUD}
                   lang={lang}
                   activeTheme={preferences.theme}
                 />
@@ -1685,6 +1711,7 @@ export default function App() {
                     setSelectedDocForBlocknote(doc);
                     setActiveTab('blocknote');
                   }}
+                  activeTheme={preferences.theme}
                 />
               )}
 
@@ -2214,6 +2241,17 @@ export default function App() {
             onClose={() => setIsPrivacyModalOpen(false)}
             lang={lang}
           />
+        )}
+
+        {/* Cyber Focus & Ambient Sound Studio HUD */}
+        {isSoundHUDOpen && (
+          <Suspense fallback={null}>
+            <CyberSoundscapeHUD
+              lang={lang}
+              onClose={() => setIsSoundHUDOpen(false)}
+              isFloating={true}
+            />
+          </Suspense>
         )}
 
         {/* Credits & Show Creators Modal */}

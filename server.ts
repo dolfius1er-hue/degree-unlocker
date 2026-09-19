@@ -3083,23 +3083,25 @@ app.post('/api/quiz/generate', async (req: Request, res: Response) => {
     const isTopicOnly = docContent.trim().length < 80 && !docContent.includes('\n');
 
     const prompt = isTopicOnly 
-      ? `You are a distinguished academic professor and examination designer.
-Generate an engaging, rigorously accurate multiple-choice quiz (QCM) consisting of ${count} questions testing the student on the academic topic/concept: "${docContent.trim()}".
-Target Level / Difficulty: ${difficulty}
+      ? `You are an elite academic professor and national examination board designer.
+Generate a rigorous, authentic multiple-choice quiz (QCM) consisting of exactly ${count} questions testing the student on: "${docContent.trim()}".
+Target Academic Level / Difficulty: ${difficulty}
 Academic Subject: ${docSubject}
 Language: ${language === 'en' ? 'English' : 'French'}
 
-QUIZ DESIGN REQUIREMENTS:
-1. Generate exactly ${count} multiple-choice questions testing core concepts, formulas, dates, mechanisms, or theorems of "${docContent.trim()}".
-2. Each question MUST have exactly 4 plausible options (options array of length 4).
-3. Exactly ONE option must be correct (correctAnswerIndex: integer from 0 to 3).
-4. Provide a clear pedagogical explanation (in ${language === 'en' ? 'English' : 'French'}) explaining why the correct choice is accurate, and briefly why alternative answers are traps.
-5. Identify the exact 'conceptTested'.
-6. The language of the questions and answers must be ${language === 'en' ? 'English' : 'French'}.
+PEDAGOGICAL & QUESTION QUALITY RULES (ZERO TRIVIA, ZERO FAKE CONTENT):
+1. Test deep conceptual understanding, causal relationships, core formulas, dates, mechanisms, or theorems of "${docContent.trim()}".
+2. Each question MUST have exactly 4 plausible options (length 4).
+3. The 3 distractors must be realistic academic traps (common student misconceptions, subtle inversions, related but incorrect dates or definitions). NEVER write obvious jokes, tautologies, or dummy placeholder options.
+4. Each of the 4 options must be comparable in syntactic length and style so students cannot deduce the answer by option length.
+5. Distribute the 'correctAnswerIndex' (0, 1, 2, or 3) evenly and unpredictably across the questions.
+6. Provide a thorough pedagogical explanation in ${language === 'en' ? 'English' : 'French'}: explain why the correct choice is accurate and why the distractors are false.
+7. Identify the precise 'conceptTested'.
+8. The language of all text must strictly be ${language === 'en' ? 'English' : 'French'}.
 
 Return ONLY a valid JSON object matching the schema.`
-      : `You are a distinguished academic professor and examination designer.
-Generate an engaging, rigorously accurate multiple-choice quiz (QCM) consisting of ${count} questions based strictly on the following educational document.
+      : `You are an elite academic professor and national examination board designer.
+Generate a rigorous, authentic multiple-choice quiz (QCM) consisting of exactly ${count} questions based strictly on the provided educational document.
 
 DOCUMENT METADATA:
 Title: ${docTitle}
@@ -3112,17 +3114,19 @@ DOCUMENT CONTENT:
 ${excerpt}
 """
 
-QUIZ DESIGN REQUIREMENTS:
-1. Generate exactly ${count} multiple-choice questions.
-2. Each question MUST have exactly 4 plausible options (options array of length 4).
-3. Exactly ONE option must be correct (correctAnswerIndex: integer from 0 to 3).
-4. Provide a clear pedagogical explanation (in ${language === 'en' ? 'English' : 'French'}) explaining why the correct choice is accurate according to the course text, and briefly why alternative answers are traps or inaccurate.
-5. Identify the exact 'conceptTested' (key term, rule, theorem, or date).
-6. Vary question styles:
+PEDAGOGICAL & QUESTION QUALITY RULES (ZERO TRIVIA, ZERO FAKE CONTENT):
+1. Generate exactly ${count} multiple-choice questions testing core concepts, formulas, definitions, dates, or mechanisms from the text.
+2. Each question MUST have exactly 4 plausible options (length 4).
+3. The 3 distractors must be grounded in the subject matter and reflect realistic academic errors or alternative interpretations. Do NOT use fake, generic, or ridiculous choices.
+4. All 4 options must be similar in length and tone to prevent guessing by visual cues.
+5. Distribute the 'correctAnswerIndex' (0, 1, 2, or 3) uniformly.
+6. Provide an in-depth pedagogical explanation in ${language === 'en' ? 'English' : 'French'} directly referencing the text and debunking incorrect alternatives.
+7. Identify the exact 'conceptTested' (key term, rule, theorem, date).
+8. Vary question modalities:
    - Direct knowledge recall & definition
    - Application or consequence of a theorem/concept
    - Critical interpretation or contextual analysis
-7. The language of the questions and answers must be ${language === 'en' ? 'English' : 'French'} matching the document's academic context.
+9. The language of all fields must strictly be ${language === 'en' ? 'English' : 'French'}.
 
 Return ONLY a valid JSON object matching the requested schema.`;
 
@@ -3170,28 +3174,56 @@ Return ONLY a valid JSON object matching the requested schema.`;
     }
 
     if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      const sentences = excerpt
+      // Extract genuine sentences and clauses from the document
+      const cleanLines = excerpt
         .split('\n')
-        .map(l => l.trim().replace(/^[-*•]\s*/, ''))
-        .filter(l => l.length > 25 && !l.startsWith('#'))
-        .slice(0, count);
+        .map(l => l.trim().replace(/^[-*•\d.]\s*/, ''))
+        .filter(l => l.length > 25 && !l.startsWith('#') && !l.toLowerCase().includes('http'));
 
-      const generatedFallbackQuestions = sentences.map((st, i) => ({
-        id: `q-fallback-${Date.now()}-${i}`,
-        question: `Dans le cadre de "${docTitle}", quelle affirmation est conforme au cours ?`,
-        options: [
-          st,
-          `Affirmation contradictoire sur ${docSubject}`,
-          `Notion hors programme pour ${docSubject}`,
-          `Hypothèse non vérifiée dans le document`,
-        ],
-        correctAnswerIndex: 0,
-        explanation: `D'après le cours : "${st}"`,
-        conceptTested: docSubject,
-        difficulty: 'medium',
-      }));
+      if (cleanLines.length >= 4) {
+        const generatedQuestions = [];
+        const pool = [...cleanLines];
 
-      parsed = { questions: generatedFallbackQuestions };
+        for (let i = 0; i < Math.min(count, pool.length); i++) {
+          const correctStmt = pool[i];
+          // Pick 3 distinct other statements from the same text as distractors
+          const otherStmts = pool.filter((_, idx) => idx !== i);
+          const distractors = otherStmts.slice(0, 3);
+
+          if (distractors.length === 3) {
+            // Randomize position of correct answer (0..3)
+            const targetPos = Math.floor(Math.random() * 4);
+            const opts = [...distractors];
+            opts.splice(targetPos, 0, correctStmt);
+
+            generatedQuestions.push({
+              id: `q-extract-${Date.now()}-${i}`,
+              question: language === 'en'
+                ? `Regarding "${docTitle}", which of the following statements is directly confirmed in the study text?`
+                : `Concernant "${docTitle}", laquelle des propositions suivantes est explicitement validée par le cours ?`,
+              options: opts,
+              correctAnswerIndex: targetPos,
+              explanation: language === 'en'
+                ? `Confirmed by course text: "${correctStmt}"`
+                : `Validé d'après le cours : "${correctStmt}"`,
+              conceptTested: docSubject,
+              difficulty: 'medium' as const,
+            });
+          }
+        }
+
+        if (generatedQuestions.length > 0) {
+          parsed = { questions: generatedQuestions };
+        }
+      }
+
+      if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+        return res.status(400).json({ 
+          error: language === 'en'
+            ? 'The provided content is too short or unstructured to generate valid examination questions. Please provide more detailed lesson text or a specific topic.'
+            : 'Le contenu est trop succinct ou non structuré pour générer des questions d’examen authentiques. Veuillez fournir un cours plus détaillé ou un sujet précis.' 
+        });
+      }
     }
     const questions = (parsed.questions || []).map((q: any, idx: number) => ({
       id: q.id || `q-${Date.now()}-${idx}`,
