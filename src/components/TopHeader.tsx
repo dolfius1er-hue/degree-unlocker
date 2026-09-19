@@ -61,6 +61,7 @@ interface TopHeaderProps {
   onOpenInstallGuide?: () => void;
   onOpenSyncManager?: () => void;
   onOpenSoundHUD?: () => void;
+  onOpenLiteOptimizer?: () => void;
   isPwaInstalled?: boolean;
   currentUser?: any;
   isSyncing?: boolean;
@@ -94,6 +95,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenInstallGuide,
   onOpenSyncManager,
   onOpenSoundHUD,
+  onOpenLiteOptimizer,
   isPwaInstalled = false,
   currentUser,
   isSyncing = false,
@@ -260,6 +262,22 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           
           {/* Integrated Pomodoro Focus Timer */}
           <FocusPomodoroTimer lang={lang} />
+
+          {/* Degree Unlocker Lite Engine & Optimizer */}
+          {onOpenLiteOptimizer && (
+            <button
+              id="btn-lite-optimizer-topheader"
+              onClick={() => {
+                soundFx.playClick(920);
+                onOpenLiteOptimizer();
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95 group"
+              title={lang === 'fr' ? 'Optimiseur Degree Unlocker Lite & Systèmes' : 'Degree Unlocker Lite Optimizer & Systems'}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
+              <span className="font-mono tracking-tight font-black">LITE ⚡</span>
+            </button>
+          )}
 
           {/* Quantum Studio & Focus Soundscape Button */}
           {onOpenSoundHUD && (

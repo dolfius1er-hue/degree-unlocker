@@ -38,7 +38,7 @@ export const PrivacyPolicyPageView: React.FC<PrivacyPolicyPageViewProps> = ({
       icon: EyeOff,
       color: 'text-emerald-400',
       description: isFr
-        ? 'Degree Unlocker Academy ne vend, ne loue et ne partage aucune de vos données scolaires ou personnelles avec des régies publicitaires. Il n\'y a aucun traceur commercial ni cookie tiers intrusif.'
+        ? 'Degree Unlocker Lite ne vend, ne loue et ne partage aucune de vos données scolaires ou personnelles avec des régies publicitaires. Il n\'y a aucun traceur commercial ni cookie tiers intrusif.'
         : 'No telemetry, advertising cookies, or commercial trackers are integrated.',
     },
     {

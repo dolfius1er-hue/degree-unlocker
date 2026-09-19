@@ -152,6 +152,13 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
 
     // System & Display
     {
+      keys: [modKey, 'Shift', 'O'],
+      descriptionFr: 'Ouvrir l\'Optimiseur Système Degree Unlocker Lite',
+      descriptionEn: 'Open Degree Unlocker Lite System Optimizer',
+      category: 'system',
+      icon: Sparkles,
+    },
+    {
       keys: [modKey, 'Shift', 'D'],
       descriptionFr: 'Basculer le Thème (Clair / Sombre)',
       descriptionEn: 'Toggle Theme (Light / Dark)',

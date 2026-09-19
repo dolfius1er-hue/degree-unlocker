@@ -11,10 +11,13 @@ import {
   User 
 } from 'firebase/auth';
 import { 
-  getFirestore, 
+  getFirestore,
+  initializeFirestore,
+  setLogLevel,
   collection, 
   doc, 
   setDoc, 
+  deleteDoc,
   getDocs, 
   getDoc,
   getDocFromServer,
@@ -25,12 +28,30 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import { SchoolDocument, Flashcard, UIPreferences } from '../types';
 
+// Set Firestore log level to error to avoid noisy connection retry warnings
+try {
+  setLogLevel('error');
+} catch (e) {
+  // Ignore in environments where setLogLevel cannot be modified
+}
+
 // Initialize Firebase App singleton safely
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId || 'ai-studio-degreeunlocker-aea10e58-ccdf-4e46-808c-8bb2be0078dd';
-export const db = getFirestore(app, firestoreDbId);
+
+// Initialize resilient Firestore with auto-detect long-polling to prevent 10s timeout warnings in proxy/container environments
+let dbInstance;
+try {
+  dbInstance = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+    ignoreUndefinedProperties: true,
+  }, firestoreDbId);
+} catch {
+  dbInstance = getFirestore(app, firestoreDbId);
+}
+export const db = dbInstance;
 
 export enum OperationType {
   CREATE = 'create',
@@ -60,9 +81,14 @@ export interface FirestoreErrorInfo {
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMessage = error instanceof Error ? error.message : String(error);
-  // Do not crash app on transient offline status
-  if (errMessage.includes('unavailable') || errMessage.includes('the client is offline')) {
-    console.info(`[Firestore Offline] ${operationType} on ${path}: operating in offline/cache mode.`);
+  // Do not crash app on transient offline status or unreachable backend warnings
+  if (
+    errMessage.includes('unavailable') || 
+    errMessage.includes('the client is offline') ||
+    errMessage.includes('Could not reach Cloud Firestore backend') ||
+    errMessage.includes('Backend didn\'t respond within 10 seconds')
+  ) {
+    console.info(`[Firestore Offline] ${operationType} on ${path}: operating in resilient offline/cache mode.`);
     return;
   }
   const errInfo: FirestoreErrorInfo = {
@@ -89,7 +115,13 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
+    if (
+      error instanceof Error && 
+      (error.message.includes('the client is offline') || 
+       error.message.includes('unavailable') || 
+       error.message.includes('Could not reach Cloud Firestore backend') ||
+       error.message.includes('Backend didn\'t respond within 10 seconds'))
+    ) {
       console.info('[Firestore] Client operating in resilient offline/cache mode.');
     }
   }
@@ -398,6 +430,20 @@ export async function sendSingleDocumentToCloud(
     docTitle: document.title,
     source: sourceDevice,
   });
+}
+
+/**
+ * Delete a document from Firestore cloud (cross-device sync deletion)
+ */
+export async function deleteDocumentFromCloud(userId: string, docId: string): Promise<void> {
+  if (!userId || !docId) return;
+  const path = `users/${userId}/documents/${docId}`;
+  try {
+    const docRef = doc(db, 'users', userId, 'documents', docId);
+    await deleteDoc(docRef);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, path);
+  }
 }
 
 export interface DeviceTransferRecord {

@@ -70,10 +70,10 @@ export const TutorialPageView: React.FC<TutorialPageViewProps> = ({
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20 text-xs font-extrabold uppercase tracking-wider">
               <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
-              <span>{isFr ? 'Tutoriel Interactif de l\'Académie' : 'Interactive Academy Tutorial'}</span>
+              <span>{isFr ? 'Tutoriel Interactif • Version Lite' : 'Interactive Tutorial • Lite Edition'}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {isFr ? 'Maîtriser Degree Unlocker Academy de A à Z' : 'Master Degree Unlocker Academy'}
+              {isFr ? 'Maîtriser Degree Unlocker Lite de A à Z' : 'Master Degree Unlocker Lite'}
             </h1>
             <p className="text-xs sm:text-sm text-indigo-200/90 leading-relaxed">
               {isFr

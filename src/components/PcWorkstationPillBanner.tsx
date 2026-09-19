@@ -64,8 +64,8 @@ interface PcWorkstationPillBannerProps {
 const SESSION_MODES_CONFIG = {
   hardcore: {
     id: 'hardcore' as SessionMode,
-    labelFr: 'Hardcore mode DegreeUnlocker',
-    labelEn: 'Hardcore mode DegreeUnlocker',
+    labelFr: 'Hardcore mode Degree Unlocker Lite',
+    labelEn: 'Hardcore mode Degree Unlocker Lite',
     badgeFr: 'MODE COMMANDO & CONCOURS',
     badgeEn: 'COMMANDO PREP MODE',
     icon: Swords,

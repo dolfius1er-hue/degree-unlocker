@@ -529,7 +529,7 @@ class OfflineStorageService {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data || { id: targetId, title: item.title }),
           });
-          if (!res.ok && res.status !== 201) {
+          if (!res.ok) {
             return { success: false, error: `HTTP ${res.status}` };
           }
         }
@@ -545,7 +545,7 @@ class OfflineStorageService {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
           });
-          if (!res.ok && res.status !== 201) {
+          if (!res.ok) {
             return { success: false, error: `HTTP ${res.status}` };
           }
         }
@@ -561,7 +561,7 @@ class OfflineStorageService {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
           });
-          if (!res.ok && res.status !== 201) {
+          if (!res.ok) {
             return { success: false, error: `HTTP ${res.status}` };
           }
         }

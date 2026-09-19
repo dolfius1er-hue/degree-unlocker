@@ -10,6 +10,7 @@ import {
   Sparkles,
   Upload,
   Cloud,
+  Share2,
   Menu
 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ interface MobileBottomNavProps {
   onOpenUpload: () => void;
   onOpenOneDrive: () => void;
   onOpenMenu: () => void;
+  onOpenExportGuide?: () => void;
   lang?: AppLanguage;
   activeTheme?: AppTheme;
 }
@@ -29,6 +31,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenUpload,
   onOpenOneDrive,
   onOpenMenu,
+  onOpenExportGuide,
   lang = 'fr',
   activeTheme = 'light',
 }) => {
@@ -61,7 +64,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all relative cursor-pointer min-w-[50px] ${
+            className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all relative cursor-pointer min-w-[46px] ${
               isActive
                 ? 'text-indigo-600 dark:text-indigo-400 font-bold scale-105'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -70,7 +73,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <div className={`p-1 rounded-lg ${isActive ? 'bg-indigo-50 dark:bg-indigo-950/60' : ''}`}>
               <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : ''}`} />
             </div>
-            <span className="text-[10px] tracking-tight truncate max-w-[54px]">
+            <span className="text-[10px] tracking-tight truncate max-w-[50px]">
               {tab.label}
             </span>
             {isActive && (
@@ -80,10 +83,26 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         );
       })}
 
+      {/* Quick Mobile Export / Share Hub Button */}
+      {onOpenExportGuide && (
+        <button
+          onClick={onOpenExportGuide}
+          className="flex flex-col items-center justify-center py-1 px-1.5 rounded-xl text-amber-600 dark:text-amber-400 hover:text-amber-700 transition-all cursor-pointer min-w-[46px]"
+          title={lang === 'fr' ? 'Exporter depuis mon téléphone' : 'Export from phone'}
+        >
+          <div className="p-1 rounded-lg bg-amber-50 dark:bg-amber-950/50">
+            <Share2 className="w-4 h-4 text-amber-500" />
+          </div>
+          <span className="text-[10px] tracking-tight font-bold text-amber-600 dark:text-amber-400">
+            {lang === 'fr' ? 'Export' : 'Export'}
+          </span>
+        </button>
+      )}
+
       {/* Quick OneDrive Sync Button on Mobile */}
       <button
         onClick={onOpenOneDrive}
-        className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-sky-600 dark:text-sky-400 hover:text-sky-700 transition-all cursor-pointer min-w-[50px]"
+        className="flex flex-col items-center justify-center py-1 px-1.5 rounded-xl text-sky-600 dark:text-sky-400 hover:text-sky-700 transition-all cursor-pointer min-w-[46px]"
         title="OneDrive Cloud"
       >
         <div className="p-1 rounded-lg bg-sky-50 dark:bg-sky-950/50">
@@ -97,7 +116,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       {/* Menu Drawer Toggle */}
       <button
         onClick={onOpenMenu}
-        className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer min-w-[48px]"
+        className="flex flex-col items-center justify-center py-1 px-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer min-w-[44px]"
         title={lang === 'fr' ? 'Plus de rubriques' : 'More tabs'}
       >
         <div className="p-1 rounded-lg">

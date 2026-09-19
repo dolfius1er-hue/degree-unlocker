@@ -552,9 +552,26 @@ body.pc-hardcore-onyx,
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ========================================================================== */
+/* DEGREE UNLOCKER LITE - ULTRA-FLUID ECO MODE OPTIMIZATIONS                  */
+/* ========================================================================== */
+.lite-eco-mode * {
+  /* Disable expensive backdrop filters to maximize FPS and battery */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.lite-eco-mode .shadow-2xl,
+.lite-eco-mode .shadow-xl {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.lite-eco-mode {
+  scroll-behavior: auto !important;
 }
 

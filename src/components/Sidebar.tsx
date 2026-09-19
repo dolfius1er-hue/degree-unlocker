@@ -39,6 +39,7 @@ import {
   Camera,
   Smartphone,
   Download,
+  Share2,
   Monitor,
   X,
   Crown,
@@ -63,6 +64,7 @@ interface SidebarProps {
   onOpenPreferences: () => void;
   onOpenCredits?: () => void;
   onOpenBackup?: () => void;
+  onOpenExportGuide?: () => void;
   onOpenCoach?: () => void;
   onOpenPhotoScanner?: () => void;
   onOpenAuthModal?: () => void;
@@ -284,6 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   onOpenPreferences,
   onOpenCredits,
   onOpenBackup,
+  onOpenExportGuide,
   onOpenCoach,
   onOpenPhotoScanner,
   onOpenAuthModal,
@@ -372,10 +375,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               </div>
               <div className="min-w-0 flex-1">
                 <span className="font-extrabold text-xs sm:text-sm tracking-tight text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5 min-w-0">
-                  <span className="truncate font-serif tracking-wide">Degree Unlocker Academy</span>
+                  <span className="truncate font-serif tracking-wide">Degree Unlocker Lite</span>
+                  <span className="px-1.5 py-0.2 rounded bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider shrink-0">
+                    LITE
+                  </span>
                 </span>
                 <p className="block text-[10px] text-amber-300/80 font-medium truncate">
-                  {lang === 'fr' ? 'Académie d\'Excellence & Révision' : 'Academy of Academic Excellence'}
+                  {lang === 'fr' ? 'Édition Allégée & Rapide' : 'Lightweight Study Station'}
                 </p>
               </div>
             </button>
@@ -383,7 +389,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
             <button 
               onClick={() => handleTabClick('dashboard')}
               className="w-10 h-10 mx-auto rounded-xl bg-gradient-to-b from-amber-500/20 via-slate-900 to-black border border-amber-400/40 flex items-center justify-center text-white shadow-md hover:border-amber-400 transition-colors shrink-0 cursor-pointer"
-              title="Degree Unlocker Academy"
+              title="Degree Unlocker Lite"
             >
               <AppLogo size="sm" />
             </button>
@@ -836,6 +842,34 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                 <div className="flex items-center gap-2.5 truncate">
                   <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
                   {!collapsed && <span className="truncate">{lang === 'fr' ? 'Liaison Téléphone ↔ PC' : 'Phone ↔ PC Sync'}</span>}
+                </div>
+              </button>
+            )}
+
+            {/* Mobile Export Guide Hub */}
+            {onOpenExportGuide && (
+              <button
+                onClick={wrapAction(onOpenExportGuide)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-amber-300 hover:bg-amber-900/30 hover:text-white transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Exporter depuis mon Téléphone' : 'Export from Phone'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Share2 className="w-4 h-4 text-amber-400 shrink-0" />
+                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Export Téléphone' : 'Phone Export'}</span>}
+                </div>
+              </button>
+            )}
+
+            {/* Backup & Export JSON */}
+            {onOpenBackup && (
+              <button
+                onClick={wrapAction(onOpenBackup)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-cyan-300 hover:bg-cyan-900/30 hover:text-white transition-all cursor-pointer"
+                title={lang === 'fr' ? 'Sauvegarde & Export (.JSON)' : 'Backup & Export (.JSON)'}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Download className="w-4 h-4 text-cyan-400 shrink-0" />
+                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Sauvegarde .JSON' : 'Backup .JSON'}</span>}
                 </div>
               </button>
             )}

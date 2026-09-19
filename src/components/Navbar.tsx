@@ -40,6 +40,7 @@ interface NavbarProps {
   onOpenVideos: () => void;
   onOpenTips: () => void;
   onOpenQuickQuote?: () => void;
+  onOpenLiteOptimizer?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,13 +57,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenVideos,
   onOpenTips,
   onOpenQuickQuote,
+  onOpenLiteOptimizer,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 shadow-2xs">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-3">
           
-          {/* Brand & Degree Unlocker Academy Title */}
+          {/* Brand & Degree Unlocker Lite Title */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
               id="brand-home-btn"
@@ -75,14 +77,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-none font-serif">
-                    Degree Unlocker Academy
+                    Degree Unlocker Lite
                   </h1>
-                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded-md">
-                    Academy v6.5
+                  <span 
+                    onClick={(e) => {
+                      if (onOpenLiteOptimizer) {
+                        e.stopPropagation();
+                        onOpenLiteOptimizer();
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-amber-400 text-black border border-amber-500 px-1.5 py-0.5 rounded-md hover:bg-amber-300 transition-colors shadow-2xs"
+                    title={lang === 'fr' ? 'Ouvrir le centre d\'optimisation Lite' : 'Open Lite Optimization Hub'}
+                  >
+                    ⚡ LITE
                   </span>
                 </div>
-                <p className="text-[10px] text-amber-700/80 uppercase tracking-widest mt-0.5 truncate hidden sm:block font-semibold">
-                  {lang === 'fr' ? 'Académie d\'Excellence & Manuels Officiels' : 'Academy of Academic Excellence'}
+                <p className="text-[10px] text-amber-700/90 uppercase tracking-widest mt-0.5 truncate hidden sm:block font-semibold">
+                  {lang === 'fr' ? 'Édition Allégée, Rapide & Autonome' : 'Lightweight High-Performance Edition'}
                 </p>
               </div>
             </button>
@@ -259,6 +270,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Youtube className="w-3.5 h-3.5 text-red-600" />
               <span>{lang === 'fr' ? 'Vidéos' : 'Videos'}</span>
             </button>
+
+            {/* Lite Optimizer Button */}
+            {onOpenLiteOptimizer && (
+              <button
+                id="btn-lite-optimizer-navbar"
+                onClick={onOpenLiteOptimizer}
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-colors border border-amber-300 shadow-2xs cursor-pointer"
+                title={lang === 'fr' ? 'Optimiseur système Lite & Diagnostic' : 'Lite System Optimizer & Diagnostics'}
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden xl:inline">Lite ⚡</span>
+              </button>
+            )}
 
             {/* Local PC Storage */}
             <button

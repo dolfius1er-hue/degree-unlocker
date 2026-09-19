@@ -1,6 +1,6 @@
 {
-  "name": "Degree Unlocker Academy",
-  "description": "Degree Unlocker Academy: High-performance academic study platform featuring official high school textbooks (Seconde, Première, Terminale), exhaustive language courses, estimated reading times, AI summaries, and handwriting notebook.",
+  "name": "Degree Unlocker Lite",
+  "description": "Degree Unlocker Lite: Lightweight, ultra-fast academic workstation optimized for rapid study, instant offline note access, SRS flashcards, authentic exam quizzes, and fluid zero-lag revision.",
   "requestFramePermissions": [
     "camera",
     "microphone"

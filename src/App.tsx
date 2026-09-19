@@ -52,6 +52,8 @@ const InstallGuideModal = lazy(() => import('./components/InstallGuideModal').th
 const NotionSubjectWorkspaceModal = lazy(() => import('./components/NotionSubjectWorkspaceModal').then(m => ({ default: m.NotionSubjectWorkspaceModal })));
 const CreditsModal = lazy(() => import('./components/CreditsModal').then(m => ({ default: m.CreditsModal || m.default })));
 const OfflineSyncManager = lazy(() => import('./components/OfflineSyncManager').then(m => ({ default: m.OfflineSyncManager })));
+const LiteOptimizationModal = lazy(() => import('./components/LiteOptimizationModal').then(m => ({ default: m.LiteOptimizationModal })));
+const MobileExportGuideModal = lazy(() => import('./components/MobileExportGuideModal').then(m => ({ default: m.MobileExportGuideModal })));
 import { NotionSubjectKey } from './components/NotionSubjectWorkspaceModal';
 
 const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })));
@@ -74,6 +76,7 @@ import {
   subscribeToCloudDocuments, 
   subscribeToDeviceTransfers, 
   sendSingleDocumentToCloud, 
+  deleteDocumentFromCloud,
   DeviceTransferRecord 
 } from './lib/firebase';
 
@@ -219,6 +222,8 @@ export default function App() {
   const [isPwaInstalled, setIsPwaInstalled] = useState<boolean>(false);
   const [isInstallGuideOpen, setIsInstallGuideOpen] = useState<boolean>(false);
   const [isSyncManagerOpen, setIsSyncManagerOpen] = useState<boolean>(false);
+  const [isLiteModalOpen, setIsLiteModalOpen] = useState<boolean>(false);
+  const [isExportGuideOpen, setIsExportGuideOpen] = useState<boolean>(false);
 
   // Memoized splash screen dismissal trigger synchronized with Tauri webview
   const dismissSplash = useMemo(() => {
@@ -826,6 +831,13 @@ export default function App() {
           return;
         }
 
+        // Ctrl+Shift+O -> Toggle Degree Unlocker Lite Optimizer
+        if ((e.key === 'o' || e.key === 'O') && e.shiftKey) {
+          e.preventDefault();
+          setIsLiteModalOpen((prev) => !prev);
+          return;
+        }
+
         // Ctrl+/ -> Toggle Keyboard Shortcuts Sheet
         if (e.key === '/' || e.key === '?') {
           e.preventDefault();
@@ -969,9 +981,17 @@ export default function App() {
             const prevMap = new Map(prev.map((d) => [d.id, d]));
             let hasChanges = false;
             for (const cd of cloudDocs) {
-              if (!prevMap.has(cd.id)) {
+              const existing = prevMap.get(cd.id);
+              if (!existing) {
                 prevMap.set(cd.id, cd);
                 hasChanges = true;
+              } else {
+                const cloudTime = new Date(cd.updatedAt || (cd as any).syncedAt || cd.createdAt || 0).getTime();
+                const localTime = new Date(existing.updatedAt || (existing as any).syncedAt || existing.createdAt || 0).getTime();
+                if (cloudTime > localTime || (!existing.updatedAt && cd.updatedAt)) {
+                  prevMap.set(cd.id, { ...existing, ...cd });
+                  hasChanges = true;
+                }
               }
             }
             if (hasChanges) {
@@ -1108,6 +1128,17 @@ export default function App() {
           await offlineStorageService.removePendingChange(savedDoc.id);
           await offlineStorageService.saveDocument(savedDoc);
           setDocuments((prev) => prev.map((d) => (d.id === savedDoc.id ? savedDoc : d)));
+
+          // Real-time Firestore sync across Phone & PC
+          if (currentUser?.uid) {
+            sendSingleDocumentToCloud(
+              currentUser.uid, 
+              savedDoc, 
+              typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'pc'
+            ).catch((cloudErr) => {
+              console.warn('[Cloud Sync] Background firestore sync error:', cloudErr);
+            });
+          }
         }
       } catch (srvErr) {
         console.warn('[Offline Engine] Server update queued for background sync:', srvErr);
@@ -1130,6 +1161,13 @@ export default function App() {
       }
       if (selectedDocForSummary?.id === id) {
         setSelectedDocForSummary(documents.find((d) => d.id !== id) || null);
+      }
+
+      // Real-time Firestore deletion across Phone & PC
+      if (currentUser?.uid) {
+        deleteDocumentFromCloud(currentUser.uid, id).catch((cloudErr) => {
+          console.warn('[Cloud Sync] Background firestore deletion error:', cloudErr);
+        });
       }
 
       const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
@@ -1333,6 +1371,7 @@ export default function App() {
           onOpenPreferences={() => setIsPreferencesOpen(true)}
           onOpenCredits={() => setIsCreditsOpen(true)}
           onOpenBackup={() => setIsBackupOpen(true)}
+          onOpenExportGuide={() => setIsExportGuideOpen(true)}
           onOpenCoach={() => setIsCoachOpen(true)}
           onOpenKeyboardShortcuts={() => setIsKeyboardShortcutsOpen(true)}
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
@@ -1390,6 +1429,7 @@ export default function App() {
           onOpenInstallGuide={() => setIsInstallGuideOpen(true)}
           onOpenSyncManager={() => setIsSyncManagerOpen(true)}
           onOpenSoundHUD={toggleSoundHUD}
+          onOpenLiteOptimizer={() => setIsLiteModalOpen(true)}
           isPwaInstalled={isPwaInstalled}
           currentUser={currentUser}
           lang={lang}
@@ -1892,6 +1932,7 @@ export default function App() {
           onOpenUpload={() => setIsPdfUploadOpen(true)}
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
           onOpenMenu={() => setIsFullScreenMenuOpen(true)}
+          onOpenExportGuide={() => setIsExportGuideOpen(true)}
           lang={lang}
           activeTheme={preferences.theme}
         />
@@ -1944,6 +1985,19 @@ export default function App() {
                 setSelectedDocForSummary(mergedDocs[0]);
               }
             }}
+            onOpenExportGuide={() => setIsExportGuideOpen(true)}
+            lang={lang}
+          />
+        )}
+
+        {/* Mobile Export Guide Modal (Phone Export & PC Transfer Hub) */}
+        {isExportGuideOpen && (
+          <MobileExportGuideModal
+            isOpen={isExportGuideOpen}
+            onClose={() => setIsExportGuideOpen(false)}
+            documents={documents}
+            onOpenBackup={() => setIsBackupOpen(true)}
+            onOpenAuthSync={() => setIsAuthModalOpen(true)}
             lang={lang}
           />
         )}
@@ -2282,6 +2336,15 @@ export default function App() {
             onClose={() => setIsSyncManagerOpen(false)}
             lang={lang}
             activeTheme={preferences.theme}
+          />
+        )}
+
+        {/* Degree Unlocker Lite - Performance Optimization & Functional Systems Hub */}
+        {isLiteModalOpen && (
+          <LiteOptimizationModal
+            isOpen={isLiteModalOpen}
+            onClose={() => setIsLiteModalOpen(false)}
+            lang={lang}
           />
         )}
 

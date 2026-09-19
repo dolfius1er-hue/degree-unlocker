@@ -277,14 +277,14 @@ export const FullScreenCommandDeckModal: React.FC<FullScreenCommandDeckModalProp
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Degree Unlocker Academy
+                  Degree Unlocker Lite
                 </h1>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                  {isFr ? 'Grand Menu Plein Écran' : 'Full-Screen Command Deck'}
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400 text-black border border-amber-300">
+                  LITE DECK
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isFr ? 'Toutes les options, manuels scolaires et pages accessibles en un coup d\'œil' : 'All options, curriculum and pages at a glance'}
+                {isFr ? 'Station d\'étude allégée : options et révisions accessibles en un coup d\'œil' : 'Lightweight study station: options and revision at a glance'}
               </p>
             </div>
           </div>

@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "DegreeUnlocker",
-  "short_name": "DegreeUnlocker",
-  "description": "Academic study platform with multi-format document intelligence, AI summaries, semantic search, and blocknote companion.",
+  "name": "Degree Unlocker Lite",
+  "short_name": "DegreeUnlocker Lite",
+  "description": "Lightweight, ultra-fast academic study platform with multi-format document intelligence, AI summaries, semantic search, and blocknote companion.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -62,7 +62,7 @@ export const WelcomeOnboardingModal: React.FC<WelcomeOnboardingModalProps> = ({
           <div>
             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold mb-1">
               <Sparkles className="w-3 h-3" />
-              <span>{lang === 'fr' ? 'Bienvenue sur Degree Unlocker' : 'Welcome to Degree Unlocker'}</span>
+              <span>{lang === 'fr' ? 'Bienvenue sur Degree Unlocker Lite' : 'Welcome to Degree Unlocker Lite'}</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
               {lang === 'fr' ? 'Votre Espace d’Étude & Révision' : 'Your Academic Study & Revision Hub'}
