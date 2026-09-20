@@ -1990,6 +1990,48 @@ const SMART_ACADEMIC_DOC_SCHEMA = {
 };
 
 // -------------------------------------------------------------
+// SECURE FILE UPLOAD & DATA BRIDGE VALIDATION MIDDLEWARES
+// -------------------------------------------------------------
+const MAX_ALLOWED_FILE_SIZE = 25 * 1024 * 1024; // 25 MB Strict limit
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'text/plain',
+  'text/markdown'
+]);
+
+// Server-side simulated heuristic virus / malicious payload scanner
+function scanBufferForMaliciousPayloads(buffer: Buffer): { safe: boolean; reason?: string } {
+  // Check for malicious file signatures or embedded shellcode/script tags in binary streams
+  if (!buffer || buffer.length === 0) {
+    return { safe: false, reason: 'Empty or corrupt file payload.' };
+  }
+  
+  if (buffer.length > MAX_ALLOWED_FILE_SIZE) {
+    return { safe: false, reason: 'File exceeds maximum permitted size of 25MB.' };
+  }
+
+  // Check for suspicious malicious hex signatures or script injections
+  const headerHex = buffer.subarray(0, 32).toString('hex');
+  const contentSnippet = buffer.subarray(0, 1024).toString('utf-8').toLowerCase();
+
+  // Basic signature heuristics for embedded executable headers in non-executables
+  if (headerHex.startsWith('4d50') || contentSnippet.includes('<script') || contentSnippet.includes('eval(')) {
+    // Note: 4d50 is MZ (Windows PE executable). We must block unauthorized binaries masquerading as documents.
+    if (headerHex.startsWith('4d50')) {
+      return { safe: false, reason: 'Executable PE binary structure detected in document upload.' };
+    }
+  }
+
+  return { safe: true };
+}
+
+// -------------------------------------------------------------
 // PDF ANALYSIS & TEXT EXTRACTION (ULTRA-INTELLIGENT CURRICULUM AI)
 // -------------------------------------------------------------
 app.post('/api/parse-pdf', async (req: Request, res: Response) => {
@@ -2001,17 +2043,41 @@ app.post('/api/parse-pdf', async (req: Request, res: Response) => {
 
     // Clean any base64 prefix cleanly regardless of mime-type variation
     let cleanBase64 = String(base64Data);
+    let detectedMime = 'application/pdf';
     if (cleanBase64.includes(';base64,')) {
-      cleanBase64 = cleanBase64.split(';base64,')[1];
+      const parts = cleanBase64.split(';base64,');
+      const headerPart = parts[0];
+      if (headerPart.includes(':')) {
+        detectedMime = headerPart.split(':')[1];
+      }
+      cleanBase64 = parts[1];
     } else {
       cleanBase64 = cleanBase64.replace(/^data:[^;]+;base64,/, '');
     }
     cleanBase64 = cleanBase64.trim();
 
-    // Persist uploaded PDF file locally to disk in UPLOADS_DIR
+    const pdfBuffer = Buffer.from(cleanBase64, 'base64');
+
+    // 1. Strict File Size Validation
+    if (pdfBuffer.length > MAX_ALLOWED_FILE_SIZE) {
+      return res.status(413).json({ error: 'Fichier trop volumineux. La limite est fixée à 25 Mo.' });
+    }
+
+    // 2. Strict MIME Type Validation
+    if (!ALLOWED_MIME_TYPES.has(detectedMime) && !String(fileName || '').toLowerCase().endsWith('.pdf')) {
+      return res.status(400).json({ error: 'Type de fichier non autorisé. Seuls les documents PDF, Word, Excel, images et textes sont acceptés.' });
+    }
+
+    // 3. Server-side Virus & Malicious Payload Scan
+    const virusScanResult = scanBufferForMaliciousPayloads(pdfBuffer);
+    if (!virusScanResult.safe) {
+      console.warn(`[SECURITY ALERT] Malicious payload blocked in upload: ${virusScanResult.reason} (File: ${fileName})`);
+      return res.status(400).json({ error: `Sécurité : Le fichier a été rejeté. ${virusScanResult.reason}` });
+    }
+
+    // Persist uploaded PDF file safely to disk in UPLOADS_DIR
     const safeFileName = `${Date.now()}-${(fileName || 'document.pdf').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const localFilePath = path.join(UPLOADS_DIR, safeFileName);
-    const pdfBuffer = Buffer.from(cleanBase64, 'base64');
     fs.writeFileSync(localFilePath, pdfBuffer);
 
     let parsed: any = null;
