@@ -61,8 +61,9 @@ const LiteOptimizationModal = lazy(() => import('./components/LiteOptimizationMo
 const MobileExportGuideModal = lazy(() => import('./components/MobileExportGuideModal').then(m => ({ default: m.MobileExportGuideModal })));
 import { NotionSubjectKey } from './components/NotionSubjectWorkspaceModal';
 
-const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })));
-const AppUpdateManager = lazy(() => import('./components/AppUpdateManager').then(m => ({ default: m.AppUpdateManager })));
+import { InstallAppBanner } from './components/InstallAppBanner';
+import { AppUpdateManager } from './components/AppUpdateManager';
+import { GlobalPolishEnhancements } from './components/GlobalPolishEnhancements';
 const OfflineIndicator = lazy(() => import('./components/OfflineIndicator').then(m => ({ default: m.OfflineIndicator })));
 const CyberSoundscapeHUD = lazy(() => import('./components/CyberSoundscapeHUD').then(m => ({ default: m.CyberSoundscapeHUD })));
 
@@ -2591,6 +2592,8 @@ export default function App() {
           onOpenSyncManager={() => setIsSyncManagerOpen(true)}
         />
       </Suspense>
+
+      <GlobalPolishEnhancements lang={lang} />
       </div>
     </DesktopLayoutWrapper>
   );
