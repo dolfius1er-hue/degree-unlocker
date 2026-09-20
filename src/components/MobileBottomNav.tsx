@@ -47,8 +47,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const tabs: { id: NavTabType; label: string; icon: any; color: string }[] = [
     { id: 'dashboard', label: lang === 'fr' ? 'Accueil' : 'Home', icon: LayoutGrid, color: 'text-blue-500' },
     { id: 'library', label: lang === 'fr' ? 'Cours' : 'Files', icon: FileText, color: 'text-emerald-500' },
+    { id: 'resumer', label: lang === 'fr' ? 'Résumés' : 'Summaries', icon: Sparkles, color: 'text-purple-500' },
     { id: 'flashcards', label: 'Flashcards', icon: Layers, color: 'text-rose-500' },
-    { id: 'quiz', label: 'Quiz', icon: CheckSquare, color: 'text-teal-500' },
     { id: 'blocknote', label: lang === 'fr' ? 'Cahier' : 'Notes', icon: PenTool, color: 'text-amber-500' },
   ];
 

@@ -1,0 +1,33 @@
+.true-focus {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35em;
+  position: relative;
+  user-select: none;
+}
+
+.true-focus__word {
+  position: relative;
+  cursor: pointer;
+  transition: filter 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
+}
+
+.true-focus__word--active {
+  filter: blur(0px) !important;
+  opacity: 1 !important;
+  transform: scale(1.05);
+}
+
+.true-focus__word--blurred {
+  opacity: 0.55;
+}
+
+.true-focus__border {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 8px;
+  border: 2px solid var(--tf-border-color, #6366f1);
+  box-shadow: 0 0 16px var(--tf-border-color, #6366f1);
+  transition: all var(--tf-duration, 0.4s) cubic-bezier(0.16, 1, 0.3, 1);
+}

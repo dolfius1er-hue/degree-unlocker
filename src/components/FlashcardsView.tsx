@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { SchoolDocument, Flashcard, FlashcardRating, AppTheme } from '../types';
+import { SchoolDocument, Flashcard, FlashcardRating, AppTheme, AppLanguage } from '../types';
 import { INITIAL_FLASHCARDS } from '../data/seedFlashcards';
 import { fetchWithRetry, fetchJsonWithRetry } from '../lib/api-utils';
 import { 
@@ -44,7 +44,7 @@ import confetti from 'canvas-confetti';
 
 interface FlashcardsViewProps {
   documents: SchoolDocument[];
-  lang?: 'fr' | 'en';
+  lang?: AppLanguage;
   onOpenDocInBlocknote?: (doc: SchoolDocument) => void;
   onOpenPlaylists?: () => void;
   activeTheme?: AppTheme;

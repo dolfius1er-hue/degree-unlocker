@@ -43,6 +43,7 @@ import {
   Monitor,
   X,
   Crown,
+  Accessibility,
   Landmark,
   Globe,
   Laptop
@@ -72,6 +73,7 @@ interface SidebarProps {
   onOpenOneDrive?: () => void;
   onOpenGoogleWorkspace?: () => void;
   onOpenPrivacy?: () => void;
+  onOpenAccessibility?: () => void;
   onOpenNotionExercises?: (subject?: string) => void;
   onFilterSubject?: (subject: string) => void;
   totalDocs: number;
@@ -294,6 +296,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   onOpenOneDrive,
   onOpenGoogleWorkspace,
   onOpenPrivacy,
+  onOpenAccessibility,
   onOpenNotionExercises,
   onFilterSubject,
   totalDocs,
@@ -334,7 +337,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
     handleClose?.();
   }, [handleClose]);
 
-  const [isQuotesSubnavOpen, setIsQuotesSubnavOpen] = useState(false);
   const dynamicSubjects = Object.keys(subjectCounts);
 
   // Background styling according to active theme
@@ -607,26 +609,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               title={lang === 'fr' ? 'Fiches Flashcards Personnalisées' : 'Custom Flashcards'}
             />
 
-            <NavItem
-              icon={<CheckSquare className="w-4 h-4 text-teal-400 shrink-0" />}
-              label={lang === 'fr' ? 'Quiz Recall' : 'Recall Quiz'}
-              isActive={activeTab === 'quiz'}
-              onClick={() => handleTabClick('quiz')}
-              collapsed={collapsed}
-              activeColorClass="bg-teal-600 text-white font-bold shadow-sm"
-              title={lang === 'fr' ? 'Quiz Active Recall' : 'Active Recall Quiz'}
-            />
-
-            <NavItem
-              icon={<Zap className="w-4 h-4 text-amber-400 shrink-0" />}
-              label={lang === 'fr' ? 'Labo Bilingue' : 'Bilingual Lab'}
-              isActive={activeTab === 'bilingual'}
-              onClick={() => handleTabClick('bilingual')}
-              collapsed={collapsed}
-              activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
-              title={lang === 'fr' ? 'Labo Bilingue & Match' : 'Bilingual Lab'}
-            />
-
             {onOpenCoach && (
               <button
                 id="btn-sidebar-socratic-coach"
@@ -641,10 +623,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
           </nav>
         </div>
 
-        {/* SECTION 2.5: GRANDES LANGUES & HUMANITÉS (Collège → Lycée) */}
+        {/* SECTION 2.5: GRANDES LANGUES (Collège → Lycée) */}
         <div>
           <SectionDivider
-            title={lang === 'fr' ? 'Langues & Humanités' : 'Languages & Humanities'}
+            title={lang === 'fr' ? 'Langues Vivantes' : 'Languages'}
             collapsed={collapsed}
             icon={<Globe className="w-3.5 h-3.5 text-emerald-400" />}
           />
@@ -675,15 +657,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               collapsed={collapsed}
               activeColorClass="bg-yellow-600 text-white font-bold shadow-sm"
               title={lang === 'fr' ? 'Cours Complet d\'Allemand Collège-Lycée' : 'Comprehensive German Course'}
-            />
-            <NavItem
-              icon={<span className="text-sm shrink-0">🏛️</span>}
-              label={lang === 'fr' ? 'Latin & Grec (Antiquité)' : 'Latin & Greek'}
-              isActive={activeTab === 'latin'}
-              onClick={() => handleTabClick('latin')}
-              collapsed={collapsed}
-              activeColorClass="bg-emerald-600 text-white font-bold shadow-sm"
-              title={lang === 'fr' ? 'Langues et Cultures de l\'Antiquité' : 'Classical Antiquity Languages'}
             />
           </nav>
         </div>
@@ -738,71 +711,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                 </div>
               </button>
             )}
-
-            {/* Famous Quotes with Collapsible Subnav */}
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-0.5">
-                <div className="flex-1 min-w-0">
-                  <NavItem
-                    icon={<Quote className="w-4 h-4 text-amber-400 shrink-0" />}
-                    label={lang === 'fr' ? '300+ Citations' : '300+ Quotes'}
-                    isActive={activeTab === 'quotes'}
-                    onClick={() => {
-                      handleTabClick('quotes');
-                      onSelectQuotesCategory?.('all', 'all');
-                    }}
-                    collapsed={collapsed}
-                    activeColorClass="bg-indigo-600 text-white font-bold shadow-sm"
-                    title={lang === 'fr' ? '300+ Citations & Discours' : '300+ Quotes'}
-                  />
-                </div>
-                {!collapsed && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsQuotesSubnavOpen(prev => !prev);
-                    }}
-                    className={`p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-transform ${isQuotesSubnavOpen ? 'rotate-90 text-amber-400' : ''}`}
-                    title={isQuotesSubnavOpen ? (lang === 'fr' ? 'Masquer sous-menu' : 'Hide sub-menu') : (lang === 'fr' ? 'Déplier Philosophie & Maximes' : 'Expand Philosophy & Maxims')}
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Sub-category: Collapsible subnav for Philosophy & Maxims */}
-              {!collapsed && isQuotesSubnavOpen && (
-                <div className="pl-3 py-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <button
-                    onClick={() => {
-                      handleTabClick('quotes');
-                      onSelectQuotesCategory?.('philosophy_maxims', 'all');
-                    }}
-                    className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 transition-all border border-amber-400/30 group cursor-pointer shadow-xs"
-                    title={lang === 'fr' ? 'Maximes et Principes de Dolfius 1er' : 'Dolfius 1st Maxims'}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0 truncate">
-                      <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0 group-hover:rotate-6 transition-transform" />
-                      <span className="truncate">{lang === 'fr' ? 'Maximes de Dolfius 1er' : 'Dolfius Maxims'}</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      handleTabClick('quotes');
-                      onSelectQuotesCategory?.('philosophy', 'all');
-                    }}
-                    className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-800/60 hover:bg-slate-700/80 transition-all border border-slate-700/60 group cursor-pointer"
-                    title={lang === 'fr' ? 'Philosophie Antique & Moderne' : 'Ancient & Modern Philosophy'}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0 truncate">
-                      <Landmark className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                      <span className="truncate">{lang === 'fr' ? 'Philosophie' : 'Philosophy'}</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Playlists & Soundscapes - Web only */}
             {!isTauri() && (
@@ -958,10 +866,12 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               <button
                 onClick={onToggleLang}
                 className="flex-1 min-w-0 py-1.5 px-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                title={lang === 'fr' ? 'Basculer la langue (FR / EN)' : 'Switch language (FR / EN)'}
+                title={lang === 'fr' ? 'Basculer la langue (FR / EN / DE / ES)' : 'Switch language (FR / EN / DE / ES)'}
               >
                 <Languages className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                <span className="tracking-wide truncate">{lang === 'fr' ? 'FR Français' : 'EN English'}</span>
+                <span className="tracking-wide truncate">
+                  {lang === 'fr' ? '🇫🇷 FR' : lang === 'en' ? '🇬🇧 EN' : lang === 'de' ? '🇩🇪 DE' : '🇪🇸 ES'}
+                </span>
               </button>
 
               {/* Theme & Layout Preferences Manager Button */}
@@ -994,6 +904,18 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 </button>
               )}
+
+              {/* Accessibility & ADA Compliance Trigger */}
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-ada-accessibility-menu'));
+                  if (onOpenAccessibility) onOpenAccessibility();
+                }}
+                className="p-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-400/30 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                title={lang === 'fr' ? 'Accessibilité & Normes ADA (WCAG 2.1 AA)' : 'Accessibility & ADA Standards (WCAG 2.1 AA)'}
+              >
+                <Accessibility className="w-4 h-4 text-purple-300" />
+              </button>
             </div>
 
             {/* Streak & Status */}
@@ -1035,6 +957,18 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                 <ShieldCheck className="w-4 h-4" />
               </button>
             )}
+
+            {/* Collapsed Accessibility button */}
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-ada-accessibility-menu'));
+                if (onOpenAccessibility) onOpenAccessibility();
+              }}
+              className="w-9 h-9 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 flex items-center justify-center border border-purple-400/30 transition-all cursor-pointer"
+              title={lang === 'fr' ? 'Accessibilité & ADA' : 'Accessibility & ADA'}
+            >
+              <Accessibility className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>

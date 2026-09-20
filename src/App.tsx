@@ -24,6 +24,8 @@ const ClassicalLanguagesView = lazy(() => import('./components/ClassicalLanguage
 const TutorialPageView = lazy(() => import('./components/TutorialPageView').then(m => ({ default: m.TutorialPageView })));
 const NoteTakingTipsPageView = lazy(() => import('./components/NoteTakingTipsPageView').then(m => ({ default: m.NoteTakingTipsPageView })));
 const PrivacyPolicyPageView = lazy(() => import('./components/PrivacyPolicyPageView').then(m => ({ default: m.PrivacyPolicyPageView })));
+const AccessibilityPageView = lazy(() => import('./components/AccessibilityPageView').then(m => ({ default: m.AccessibilityPageView })));
+const NotFoundPageView = lazy(() => import('./components/NotFoundPageView').then(m => ({ default: m.NotFoundPageView })));
 const FullScreenCommandDeckModal = lazy(() => import('./components/FullScreenCommandDeckModal').then(m => ({ default: m.FullScreenCommandDeckModal })));
 
 // Lazy loaded modals
@@ -48,6 +50,9 @@ const OneDriveSyncModal = lazy(() => import('./components/OneDriveSyncModal').th
 const GoogleWorkspaceModal = lazy(() => import('./components/GoogleWorkspaceModal').then(m => ({ default: m.GoogleWorkspaceModal })));
 const GoogleDriveBrowser = lazy(() => import('./components/GoogleDriveBrowser').then(m => ({ default: m.GoogleDriveBrowser })));
 const PrivacyPolicyModal = lazy(() => import('./components/PrivacyPolicyModal').then(m => ({ default: m.PrivacyPolicyModal })));
+const AccessibilityModal = lazy(() => import('./components/AccessibilityModal').then(m => ({ default: m.AccessibilityModal })));
+const AgeGateModal = lazy(() => import('./components/AgeGateModal').then(m => ({ default: m.AgeGateModal })));
+import { isAgeGateVerified } from './components/AgeGateModal';
 const InstallGuideModal = lazy(() => import('./components/InstallGuideModal').then(m => ({ default: m.InstallGuideModal })));
 const NotionSubjectWorkspaceModal = lazy(() => import('./components/NotionSubjectWorkspaceModal').then(m => ({ default: m.NotionSubjectWorkspaceModal })));
 const CreditsModal = lazy(() => import('./components/CreditsModal').then(m => ({ default: m.CreditsModal || m.default })));
@@ -62,9 +67,12 @@ const OfflineIndicator = lazy(() => import('./components/OfflineIndicator').then
 const CyberSoundscapeHUD = lazy(() => import('./components/CyberSoundscapeHUD').then(m => ({ default: m.CyberSoundscapeHUD })));
 
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { AccessibilityMenuToggle } from './components/AccessibilityMenuToggle';
 import { DesktopLayoutWrapper } from './components/DesktopLayoutWrapper';
 import { PcWorkstationPillBanner } from './components/PcWorkstationPillBanner';
 import { LockInWorkstationHub } from './components/LockInWorkstationHub';
+import { UndoToast } from './components/UndoToast';
+import { SafeConfirmModal } from './components/SafeConfirmModal';
 import { offlineStorageService } from './services/offlineStorageService';
 import { isTauri, showWindow } from './lib/tauri-bridge';
 import { useTauriDesktopWorkstation } from './hooks/useTauriDesktopWorkstation';
@@ -89,8 +97,29 @@ export default function App() {
     autoEnableOnTauri: true,
   });
 
-  // Deterministic initial state for zero-warning React hydration
-  const [activeTab, setActiveTab] = useState<NavTabType>('dashboard');
+  // Deterministic initial state for zero-warning React hydration and direct deep linking
+  const [activeTab, setActiveTab] = useState<NavTabType>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
+      if (path === '/privacy' || path === '/terms') return 'privacy';
+      if (path === '/accessibility' || path === '/ada') return 'accessibility';
+      if (path && path !== '' && path !== '/') return 'not_found';
+    }
+    return 'dashboard';
+  });
+
+  // Browser navigation popstate listener for clean URLs
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
+      if (path === '/privacy' || path === '/terms') setActiveTab('privacy');
+      else if (path === '/accessibility' || path === '/ada') setActiveTab('accessibility');
+      else if (path === '' || path === '/') setActiveTab('dashboard');
+      else setActiveTab('not_found');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   // Cyber Focus & Ambient Sound Studio State
   const [isSoundHUDOpen, setIsSoundHUDOpen] = useState<boolean>(() => {
@@ -155,6 +184,21 @@ export default function App() {
     return () => window.removeEventListener('inAppNotificationToast', handleInAppNotification);
   }, []);
 
+  // Auto-dismiss toast notifications after 4 seconds
+  useEffect(() => {
+    if (deviceToast) {
+      const timer = setTimeout(() => setDeviceToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [deviceToast]);
+
+  useEffect(() => {
+    if (apiErrorToast) {
+      const timer = setTimeout(() => setApiErrorToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [apiErrorToast]);
+
   // Whenever selected document changes, persist its ID to localStorage
   useEffect(() => {
     const docToPersist = selectedDocForBlocknote || selectedDocForSummary;
@@ -201,6 +245,10 @@ export default function App() {
   const [quotesInitialSubcategory, setQuotesInitialSubcategory] = useState<'all' | 'dolfius_4_maximes' | 'image_maximes'>('all');
   const [isGoogleDriveBrowserOpen, setIsGoogleDriveBrowserOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isAccessibilityModalOpen, setIsAccessibilityModalOpen] = useState(false);
+  const [lastDeletedDoc, setLastDeletedDoc] = useState<SchoolDocument | null>(null);
+  const [isUndoToastVisible, setIsUndoToastVisible] = useState(false);
+  const [isAgeGateOpen, setIsAgeGateOpen] = useState<boolean>(() => !isAgeGateVerified());
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
   const [presentationDoc, setPresentationDoc] = useState<SchoolDocument | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -467,6 +515,42 @@ export default function App() {
         console.warn('[Stage 3] Silent background sync skipped, operating offline.');
       }
 
+      // 4. Silent Background Streaks sync & Auto-record today's activity
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const streakRes = await fetchWithRetry('/api/streaks', { retries: 1, initialDelayMs: 300 });
+        if (streakRes.ok && isMounted) {
+          const streakData = await streakRes.json();
+          if (streakData && Array.isArray(streakData.activityDates)) {
+            setActivityDates(prev => {
+              const combined = Array.from(new Set([...prev, todayStr, ...streakData.activityDates]));
+              try {
+                localStorage.setItem('degreelocker_activity_dates', JSON.stringify(combined));
+              } catch (e) {}
+              return combined;
+            });
+          }
+        } else if (isMounted) {
+          setActivityDates(prev => {
+            const combined = prev.includes(todayStr) ? prev : [...prev, todayStr];
+            try {
+              localStorage.setItem('degreelocker_activity_dates', JSON.stringify(combined));
+            } catch (e) {}
+            return combined;
+          });
+        }
+      } catch (err) {
+        // Local fallback
+        const todayStr = new Date().toISOString().split('T')[0];
+        setActivityDates(prev => {
+          const combined = prev.includes(todayStr) ? prev : [...prev, todayStr];
+          try {
+            localStorage.setItem('degreelocker_activity_dates', JSON.stringify(combined));
+          } catch (e) {}
+          return combined;
+        });
+      }
+
       // Schedule Stage 4 for non-critical observers and listeners
       if (isMounted) {
         const idleCallback = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 250));
@@ -562,16 +646,22 @@ export default function App() {
   const recordStudyActivity = () => {
     const today = new Date().toISOString().split('T')[0];
     setActivityDates((prev) => {
-      if (!prev.includes(today)) {
-        const updated = [...prev, today];
-        try {
-          localStorage.setItem('degreelocker_activity_dates', JSON.stringify(updated));
-        } catch (e) {
-          console.warn('Could not save activity date:', e);
-        }
-        return updated;
+      const updated = prev.includes(today) ? prev : [...prev, today];
+      try {
+        localStorage.setItem('degreelocker_activity_dates', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Could not save activity date:', e);
       }
-      return prev;
+      return updated;
+    });
+
+    // Non-blocking sync with server streaks API
+    fetch('/api/streaks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: today }),
+    }).catch(() => {
+      // Offline fallback silent catch
     });
   };
 
@@ -679,7 +769,9 @@ export default function App() {
   };
 
   const handleToggleLang = () => {
-    const nextLang: AppLanguage = lang === 'fr' ? 'en' : 'fr';
+    const langs: AppLanguage[] = ['fr', 'en', 'de', 'es'];
+    const currentIndex = langs.indexOf(lang);
+    const nextLang = langs[(currentIndex + 1) % langs.length];
     setLang(nextLang);
     handleUpdatePreferences({ language: nextLang });
   };
@@ -1150,6 +1242,13 @@ export default function App() {
   };
 
   const handleDeleteDocument = async (id: string) => {
+    const docToDelete = documents.find((d) => d.id === id);
+    if (!docToDelete) return;
+
+    // Trigger Undo Toast for user safety
+    setLastDeletedDoc(docToDelete);
+    setIsUndoToastVisible(true);
+
     try {
       // Immediate local deletion & offline queueing
       await offlineStorageService.deleteDocument(id);
@@ -1176,6 +1275,33 @@ export default function App() {
       }
     } catch (err) {
       console.warn('[Offline Engine] Deletion queued for background sync:', err);
+    }
+  };
+
+  const handleUndoDelete = async () => {
+    if (!lastDeletedDoc) return;
+    const restored = lastDeletedDoc;
+    setLastDeletedDoc(null);
+    setIsUndoToastVisible(false);
+
+    try {
+      await offlineStorageService.saveDocument(restored);
+      await offlineStorageService.enqueuePendingChange('create', restored);
+      setDocuments((prev) => [restored, ...prev.filter((d) => d.id !== restored.id)]);
+      setSelectedDocForBlocknote(restored);
+      setSelectedDocForSummary(restored);
+
+      if (currentUser?.uid) {
+        sendSingleDocumentToCloud(currentUser.uid, restored).catch(() => {});
+      }
+
+      await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(restored),
+      });
+    } catch (e) {
+      console.warn('Failed to restore document', e);
     }
   };
 
@@ -1350,7 +1476,19 @@ export default function App() {
       : 'bg-slate-50 text-slate-900';
 
   return (
-    <DesktopLayoutWrapper lang={lang} activeTheme={preferences.theme}>
+    <DesktopLayoutWrapper 
+      lang={lang} 
+      activeTheme={preferences.theme}
+      onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
+    >
+      {/* Accessible Skip to Content Link (WCAG / ADA Requirement) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:font-bold focus:rounded-xl focus:shadow-xl focus:outline-none"
+      >
+        {lang === 'fr' ? 'Passer au contenu principal' : 'Skip to main content'}
+      </a>
+
       <div className={`min-h-[100dvh] w-full max-w-[100vw] overflow-hidden ${appBgClass} flex font-sans selection:bg-indigo-100 selection:text-indigo-900 transition-colors duration-200`}>
       
       {/* Side Menu Navigation (Visible if menuPosition is 'left') */}
@@ -1377,6 +1515,7 @@ export default function App() {
           onOpenOneDrive={() => setIsOneDriveOpen(true)}
           onOpenGoogleWorkspace={() => setIsGoogleWorkspaceOpen(true)}
           onOpenPrivacy={() => setIsPrivacyModalOpen(true)}
+          onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
           onOpenNotionExercises={(subj) => {
             if (subj) setSelectedNotionSubject(subj as any);
             setIsNotionWorkspaceOpen(true);
@@ -1446,7 +1585,7 @@ export default function App() {
         />
 
         {/* Workspace Body - Spacious and responsive */}
-        <main className="flex-1 max-w-[1500px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20">
+        <main id="main-content" tabIndex={-1} className="flex-1 max-w-[1500px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 focus:outline-none">
           
           {/* Live Mobile-to-PC sync notification banner */}
           {deviceToast && (
@@ -1714,20 +1853,7 @@ export default function App() {
                 />
               )}
 
-              {/* Tab 6: 100+ Famous Quotes & Speeches Explorer */}
-              {activeTab === 'quotes' && (
-                <FamousQuotesView
-                  lang={lang}
-                  onOpenDocWithTopic={(topic) => {
-                    setActiveTab('search');
-                  }}
-                  initialCategory={quotesInitialCategory}
-                  initialSubcategory={quotesInitialSubcategory}
-                  onOpenCoach={() => setIsCoachOpen(true)}
-                />
-              )}
-
-              {/* Tab 7: Flashcards & Leitner Spaced Repetition */}
+              {/* Tab 7: Flashcards & Spaced Repetition */}
               {activeTab === 'flashcards' && (
                 <FlashcardsView
                   documents={documents}
@@ -1752,19 +1878,6 @@ export default function App() {
                     setActiveTab('blocknote');
                   }}
                   activeTheme={preferences.theme}
-                />
-              )}
-
-              {/* Tab 9: Bilingual Lab */}
-              {activeTab === 'bilingual' && (
-                <BilingualLearningView
-                  documents={documents}
-                  lang={lang}
-                  onOpenDocInBlocknote={(doc) => {
-                    setSelectedDocForBlocknote(doc);
-                    setActiveTab('blocknote');
-                  }}
-                  onCompleteExercise={recordStudyActivity}
                 />
               )}
 
@@ -1853,30 +1966,6 @@ export default function App() {
                 />
               )}
 
-              {/* Tab 13: Classical Languages (Latin & Greek) */}
-              {activeTab === 'latin' && (
-                <ClassicalLanguagesView
-                  lang={lang}
-                  activeTheme={preferences.theme}
-                  onOpenInBlocknote={(title, subject, content) => {
-                    const tempDoc: SchoolDocument = {
-                      id: 'latin_' + Date.now(),
-                      title: title,
-                      subject: subject,
-                      type: 'typed_note',
-                      content: content,
-                      summary: `Fiche de cours Humanités Anciennes: ${title}`,
-                      date: new Date().toLocaleDateString('fr-FR'),
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                      tags: ['Latin', 'Grec', 'Humanités', subject]
-                    };
-                    setSelectedDocForBlocknote(tempDoc);
-                    setActiveTab('blocknote');
-                  }}
-                />
-              )}
-
               {/* Tab 14: Interactive Tutorial & Quickstart Guide */}
               {activeTab === 'tutorial' && (
                 <TutorialPageView
@@ -1918,6 +2007,27 @@ export default function App() {
                   lang={lang}
                   activeTheme={preferences.theme}
                   onBack={() => setActiveTab('dashboard')}
+                />
+              )}
+
+              {/* Tab 17: Accessibility Statement (ADA / WCAG 2.1 AA Compliance) */}
+              {activeTab === 'accessibility' && (
+                <AccessibilityPageView
+                  lang={lang}
+                  onBack={() => setActiveTab('dashboard')}
+                />
+              )}
+
+              {/* Tab 18: 404 Custom Not Found Page */}
+              {activeTab === 'not_found' && (
+                <NotFoundPageView
+                  lang={lang}
+                  activeTheme={preferences.theme}
+                  onGoHome={() => setActiveTab('dashboard')}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onSearchQuery={(q) => {
+                    setActiveTab('search');
+                  }}
                 />
               )}
             </Suspense>
@@ -2297,6 +2407,39 @@ export default function App() {
           />
         )}
 
+        {/* Accessibility Statement Modal (ADA / WCAG 2.1 AA Compliance) */}
+        {isAccessibilityModalOpen && (
+          <AccessibilityModal
+            isOpen={isAccessibilityModalOpen}
+            onClose={() => setIsAccessibilityModalOpen(false)}
+            lang={lang}
+          />
+        )}
+
+        {/* Undo Toast for Accidental Deletion */}
+        {isUndoToastVisible && lastDeletedDoc && (
+          <UndoToast
+            message={lang === 'fr' ? `« ${lastDeletedDoc.title} » supprimé` : `"${lastDeletedDoc.title}" deleted`}
+            onUndo={handleUndoDelete}
+            onDismiss={() => {
+              setIsUndoToastVisible(false);
+              setLastDeletedDoc(null);
+            }}
+            durationMs={8000}
+            lang={lang}
+          />
+        )}
+
+        {/* Digital Age Gate (15+ RGPD Compliance) */}
+        {isAgeGateOpen && (
+          <AgeGateModal
+            isOpen={isAgeGateOpen}
+            onConfirm={() => setIsAgeGateOpen(false)}
+            onOpenPrivacyPolicy={() => setIsPrivacyModalOpen(true)}
+            lang={lang}
+          />
+        )}
+
         {/* Cyber Focus & Ambient Sound Studio HUD */}
         {isSoundHUDOpen && (
           <Suspense fallback={null}>
@@ -2433,6 +2576,12 @@ export default function App() {
           />
         </Suspense>
       )}
+
+      {/* Persistent ADA Accessibility Floating Menu Toggle */}
+      <AccessibilityMenuToggle 
+        lang={lang} 
+        onOpenAccessibilityStatement={() => setIsAccessibilityModalOpen(true)} 
+      />
 
       {/* Offline & IndexedDB Status Indicator */}
       <Suspense fallback={null}>

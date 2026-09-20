@@ -228,8 +228,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 // Keep input responsive
               }}
               placeholder={lang === 'fr' 
-                ? 'Rechercher cours, notions, quiz...' 
-                : 'Search notes, concepts, quiz...'}
+                ? 'Rechercher cours, notions, fiches...' 
+                : 'Search notes, concepts, flashcards...'}
               className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 font-medium"
             />
             {headerSearchQuery && (

@@ -19,7 +19,8 @@ import {
   Share2,
   CheckCheck,
   Volume2,
-  VolumeX
+  VolumeX,
+  Accessibility
 } from 'lucide-react';
 import { 
   isTauri, 
@@ -36,12 +37,14 @@ interface DesktopLayoutWrapperProps {
   children: ReactNode;
   lang?: AppLanguage;
   activeTheme?: AppTheme;
+  onOpenAccessibility?: () => void;
 }
 
 export const DesktopLayoutWrapper: React.FC<DesktopLayoutWrapperProps> = ({
   children,
   lang = 'fr',
-  activeTheme = 'light'
+  activeTheme = 'light',
+  onOpenAccessibility
 }) => {
   const [isLargeViewport, setIsLargeViewport] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -386,6 +389,20 @@ export const DesktopLayoutWrapper: React.FC<DesktopLayoutWrapperProps> = ({
                   </>
                 )}
               </motion.button>
+
+              {/* Accessibility / ADA Standards Button */}
+              {onOpenAccessibility && (
+                <button
+                  id="btn-win-accessibility"
+                  onClick={onOpenAccessibility}
+                  className="h-7.5 px-2.5 py-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white/90 dark:hover:bg-slate-700/90 border border-transparent hover:border-slate-300/50 dark:hover:border-slate-600/50 transition-all rounded-md cursor-pointer shadow-2xs"
+                  title={lang === 'fr' ? 'Accessibilité & Normes ADA (WCAG 2.1 AA)' : 'Accessibility & ADA Compliance (WCAG 2.1 AA)'}
+                  aria-label={lang === 'fr' ? 'Ouvrir les paramètres et la déclaration d\'accessibilité ADA' : 'Open accessibility and ADA statement'}
+                >
+                  <Accessibility className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="hidden xl:inline tracking-tight">{lang === 'fr' ? 'Accessibilité' : 'Accessibility'}</span>
+                </button>
+              )}
             </div>
 
             {/* Standard Windows 11 Window Controls (Rendered ONLY inside native Tauri Desktop executable) */}

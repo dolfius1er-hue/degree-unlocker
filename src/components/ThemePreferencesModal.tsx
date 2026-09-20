@@ -11,13 +11,16 @@ import {
   X, 
   Check, 
   Sliders, 
-  Sidebar as SidebarIcon,
-  Monitor,
-  CheckCircle2,
-  Save,
-  RotateCcw,
-  HardDrive,
-  Key
+  Sidebar as SidebarIcon, 
+  Monitor, 
+  CheckCircle2, 
+  Save, 
+  RotateCcw, 
+  HardDrive, 
+  Key,
+  Accessibility,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
 
 interface ThemePreferencesModalProps {
@@ -320,6 +323,42 @@ export const ThemePreferencesModal: React.FC<ThemePreferencesModalProps> = ({
                   {lang === 'fr' ? 'Effacer' : 'Clear'}
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* 5. SPECIAL PARAMETERS, ACCESSIBILITY ADA & CLAUSES */}
+          <div className="space-y-3 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>{lang === 'fr' ? '5. Paramètres Spéciaux, Accessibilité & Clauses' : '5. Special Settings, Accessibility & Clauses'}</span>
+            </label>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-ada-accessibility-menu'));
+                  onClose();
+                }}
+                className="p-2.5 rounded-xl border border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200 text-xs font-bold flex items-center justify-between transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Accessibility className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span>{lang === 'fr' ? 'Menu Accessibilité ADA' : 'ADA Accessibility Menu'}</span>
+                </div>
+                <span className="text-[10px] font-mono text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-1.5 py-0.5 rounded">
+                  Alt+A
+                </span>
+              </button>
+
+              <div className="p-2.5 rounded-xl border border-amber-300/60 dark:border-amber-500/30 bg-amber-50/40 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-[11px] leading-snug flex items-start gap-2">
+                <UserCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  {lang === 'fr'
+                    ? 'Petite équipe indépendante : améliorations au jour le jour.'
+                    : 'Small independent team: daily continuous improvements.'}
+                </span>
+              </div>
             </div>
           </div>
 

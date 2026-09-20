@@ -1,4 +1,4 @@
-const CACHE_NAME = 'degree-unlocker-v3.4.0';
+const CACHE_NAME = 'degree-unlocker-v6.5.0';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

@@ -22,25 +22,39 @@ export default defineConfig(() => {
     },
     build: {
       outDir: 'dist',
+      sourcemap: false,
+      minify: 'esbuild',
       emptyOutDir: false, // Prevents deleting files if esbuild or other assets are in dist
-      chunkSizeWarningLimit: 800,
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
+              if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) {
+                return 'vendor-react';
+              }
               if (id.includes('firebase')) {
                 return 'vendor-firebase';
               }
               if (id.includes('@google/genai')) {
                 return 'vendor-genai';
               }
-              if (id.includes('jspdf') || id.includes('xlsx') || id.includes('mammoth')) {
+              if (id.includes('jspdf') || id.includes('xlsx') || id.includes('mammoth') || id.includes('jszip')) {
                 return 'vendor-docparsers';
               }
-              if (id.includes('motion') || id.includes('lucide-react')) {
-                return 'vendor-ui-libs';
+              if (id.includes('lucide-react')) {
+                return 'vendor-lucide';
               }
-              return 'vendor-core';
+              if (id.includes('motion')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('react-markdown')) {
+                return 'vendor-markdown';
+              }
+              if (id.includes('canvas-confetti') || id.includes('google-tts-api')) {
+                return 'vendor-utils';
+              }
+              return 'vendor-misc';
             }
           }
         }

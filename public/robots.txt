@@ -1,0 +1,12 @@
+# robots.txt for Degree Unlocker
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /accessibility
+
+# Disallow private temporary API and sync endpoints from search engine scrapers
+Disallow: /api/
+Disallow: /data/
+
+Sitemap: https://degreeunlocker.pages.dev/sitemap.xml

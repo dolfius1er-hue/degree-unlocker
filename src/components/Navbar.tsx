@@ -170,19 +170,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
-              id="nav-tab-quotes"
-              onClick={() => setActiveTab('quotes')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'quotes'
-                  ? 'bg-amber-500 text-slate-950 shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <Quote className="w-3.5 h-3.5 text-amber-600" />
-              <span>{lang === 'fr' ? '300+ Citations' : '300+ Quotes'}</span>
-            </button>
-
-            <button
               id="nav-tab-flashcards"
               onClick={() => setActiveTab('flashcards')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -193,32 +180,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Brain className="w-3.5 h-3.5" />
               <span>{lang === 'fr' ? 'Flashcards' : 'Flashcards'}</span>
-            </button>
-
-            <button
-              id="nav-tab-quiz"
-              onClick={() => setActiveTab('quiz')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'quiz'
-                  ? 'bg-blue-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-300" />
-              <span>{lang === 'fr' ? 'Quiz' : 'Quiz Arena'}</span>
-            </button>
-
-            <button
-              id="nav-tab-bilingual"
-              onClick={() => setActiveTab('bilingual')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'bilingual'
-                  ? 'bg-teal-700 text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <Languages className="w-3.5 h-3.5 text-teal-300" />
-              <span>{lang === 'fr' ? 'Langues' : 'Languages'}</span>
             </button>
 
             <button

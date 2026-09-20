@@ -4,6 +4,7 @@ import { SchoolDocument, SummaryOptions, AppLanguage } from '../types';
 import { fetchJsonWithRetry } from '../lib/api-utils';
 import { getSubjectBadgeClass } from '../utils/colors';
 import { exportSlidesDeckPdf } from '../utils/slidePdfExport';
+import { generateClientSideSummary } from '../utils/localSummarizer';
 import { 
   Sparkles, 
   BookOpen, 
@@ -66,25 +67,29 @@ export const ResumerView: React.FC<ResumerViewProps> = ({
           targetLength,
           language: lang === 'fr' ? 'fr' : 'en',
         }),
-      }, { retries: 3, initialDelayMs: 600 });
+      }, { retries: 2, initialDelayMs: 400 });
 
       if (data && data.summary) {
         onUpdateDocumentSummary(activeDoc.id, data.summary, data.keyPoints || []);
         if (data.examTips) {
           setExamTips(data.examTips);
         }
+      } else {
+        throw new Error('No summary payload received');
       }
     } catch (err: any) {
-      console.error('Summary error:', err);
-      const isUnavailable = err.message?.includes('503') || err.message?.includes('high demand') || err.status === 503;
-      if (isUnavailable) {
-        alert(
-          lang === 'fr'
-            ? 'Le modèle Gemini est actuellement très sollicité. Les tentatives automatiques ont échoué. Veuillez réessayer dans quelques instants.'
-            : 'Gemini is experiencing high demand. Retries exhausted. Please try again in a moment.'
-        );
-      } else {
-        alert(err.message || (lang === 'fr' ? 'Erreur lors de la génération du résumé' : 'Error generating summary'));
+      console.warn('Backend summary generation failed, switching to local Cornell engine:', err);
+      // Seamless local offline fallback
+      const localRes = generateClientSideSummary(
+        activeDoc.title,
+        activeDoc.subject,
+        activeDoc.content,
+        style,
+        lang === 'fr' ? 'fr' : 'en'
+      );
+      onUpdateDocumentSummary(activeDoc.id, localRes.summary, localRes.keyPoints);
+      if (localRes.examTips) {
+        setExamTips(localRes.examTips);
       }
     } finally {
       setLoading(false);

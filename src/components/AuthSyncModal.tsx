@@ -494,7 +494,7 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                     </span>
                   </button>
 
-                  {/* Toggle Email/Password form */}
+                  {/* Toggle Email/Password form with Real-time Validation */}
                   {!showEmailForm ? (
                     <button
                       type="button"
@@ -518,41 +518,64 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                           className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                         >
                           {isSignUp 
-                            ? (lang === 'fr' ? 'Déjà un compte ?' : 'Already have account?')
+                            ? (lang === 'fr' ? 'Déjà un compte ? Se connecter' : 'Already have account? Sign in')
                             : (lang === 'fr' ? 'Pas de compte ? Créer' : 'Create new account')}
                         </button>
                       </div>
 
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="nom@universite.fr"
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
-                      />
+                      {/* Email input with real-time feedback */}
+                      <div>
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="etudiant@universite.fr"
+                          className={`w-full px-3 py-2 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-white transition-all ${
+                            email && email.includes('@') && email.includes('.')
+                              ? 'border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+                              : email
+                              ? 'border-amber-400 focus:ring-1 focus:ring-amber-400'
+                              : 'border-slate-300 dark:border-slate-700'
+                          }`}
+                        />
+                      </div>
 
-                      <input
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder={lang === 'fr' ? 'Mot de passe (min 6 caractères)' : 'Password (min 6 chars)'}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
-                      />
+                      {/* Password input with length indicator */}
+                      <div>
+                        <input
+                          type="password"
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder={lang === 'fr' ? 'Mot de passe (min 6 caractères)' : 'Password (min 6 chars)'}
+                          className={`w-full px-3 py-2 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-white transition-all ${
+                            password.length >= 6
+                              ? 'border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+                              : password.length > 0
+                              ? 'border-rose-400 focus:ring-1 focus:ring-rose-400'
+                              : 'border-slate-300 dark:border-slate-700'
+                          }`}
+                        />
+                        {password.length > 0 && password.length < 6 && (
+                          <p className="text-[10px] text-rose-500 mt-1">
+                            {lang === 'fr' ? 'Le mot de passe doit comporter au moins 6 caractères.' : 'Password must be at least 6 characters.'}
+                          </p>
+                        )}
+                      </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 pt-1">
                         <button
                           type="submit"
-                          disabled={isProcessing}
-                          className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                          disabled={isProcessing || !email.includes('@') || password.length < 6}
+                          className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
                         >
                           {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : (isSignUp ? (lang === 'fr' ? 'Créer mon compte' : 'Register') : (lang === 'fr' ? 'Se connecter' : 'Sign In'))}
                         </button>
                         <button
                           type="button"
                           onClick={() => setShowEmailForm(false)}
-                          className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300"
+                          className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         >
                           {lang === 'fr' ? 'Annuler' : 'Cancel'}
                         </button>

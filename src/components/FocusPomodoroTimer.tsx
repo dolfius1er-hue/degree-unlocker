@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Timer, Sparkles, Coffee, Bell, Volume2, VolumeX, Settings2, Check } from 'lucide-react';
+import { AppLanguage } from '../types';
 
 interface FocusPomodoroTimerProps {
-  lang?: 'fr' | 'en';
+  lang?: AppLanguage;
   onSessionComplete?: (sessionType: 'work' | 'break', durationMinutes: number) => void;
 }
 

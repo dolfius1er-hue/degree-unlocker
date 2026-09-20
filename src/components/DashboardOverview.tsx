@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { SchoolDocument, AppLanguage, AppTheme } from '../types';
 import { calculateReadingTime } from '../utils/readingTime';
 import { DailyStudyGoals } from './DailyStudyGoals';
+import { DepthText } from './ui/DepthText';
+import { MagicRings } from './ui/MagicRings';
+import { TrueFocus } from './ui/TrueFocus';
 import { 
   BookOpen, 
   Search, 
@@ -56,6 +59,7 @@ import {
 } from 'lucide-react';
 import { useDownloadWindowsExe } from '../hooks/useDownloadWindowsExe';
 import { soundFx } from '../utils/soundEffects';
+import { DisclaimerFooter } from './DisclaimerFooter';
 
 interface DashboardOverviewProps {
   documents: SchoolDocument[];
@@ -542,14 +546,36 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           
           {/* Left Hero Content */}
           <div className="space-y-4 max-w-2xl">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              {lang === 'fr' ? 'Réussissez vos Évaluations & Examens' : 'Master Your Courses & Exams'}
-            </h1>
+            <div className="py-1">
+              <DepthText
+                text={lang === 'fr' ? 'Degree Unlocker Lite' : 'Degree Unlocker Lite'}
+                layers={6}
+                depth={1.5}
+                faceColor="#ffffff"
+                depthColor="#4f46e5"
+                tilt={4}
+                fontSize="clamp(2rem, 5vw, 3.25rem)"
+                fontWeight={900}
+                shadow
+              />
+            </div>
             
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
+            <div className="pt-1">
+              <TrueFocus
+                sentence={lang === 'fr' ? 'Notes Fiches Synthèses & Exercices' : 'Notes Flashcards Summaries & Exercises'}
+                manualMode={false}
+                blurAmount={3}
+                borderColor="#818cf8"
+                animationDuration={0.4}
+                pauseBetweenAnimations={1.5}
+                className="text-base sm:text-lg font-bold text-indigo-200"
+              />
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl">
               {lang === 'fr'
-                ? 'Importez vos supports de cours (PDF, Docx) ou créez des fiches adaptées pour mémoriser durablement.'
-                : 'Import your course files (PDF, Docx) or craft custom revision cards to build lasting memory.'}
+                ? 'Importez vos supports de cours (PDF, Docx), générez des résumés immédiats et travaillez vos exercices de manuels.'
+                : 'Import your course files (PDF, Docx), generate instant summaries, and practice your textbook exercises.'}
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -610,7 +636,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
 
           {/* Right Hero Stats Card (Base Locale Active) */}
-          <div className="w-full lg:w-80 bg-slate-900 rounded-2xl p-5 border border-slate-700/60 shadow-xl space-y-4 shrink-0">
+          <div className="relative overflow-hidden w-full lg:w-80 bg-slate-900/90 rounded-2xl p-5 border border-slate-700/60 shadow-xl space-y-4 shrink-0">
+            <div className="absolute inset-0 opacity-25 pointer-events-none">
+              <MagicRings 
+                color="#6366f1"
+                colorTwo="#ec4899"
+                ringCount={3}
+                speed={0.5}
+                attenuation={10}
+                lineThickness={1.2}
+                opacity={0.5}
+              />
+            </div>
             
             {/* Status Header */}
             <div className="flex items-center justify-between gap-2 text-xs font-bold">
@@ -1228,15 +1265,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
 
           <div 
-            onClick={() => onNavigateTab('quiz')}
+            onClick={() => onNavigateTab('school_books')}
             className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all space-y-3"
           >
             <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Zap className="w-5 h-5" />
+              <BookOpen className="w-5 h-5" />
             </div>
-            <h4 className="font-bold text-sm text-slate-900 dark:text-white">{lang === 'fr' ? 'Quiz Recall & QCM' : 'Active Recall Quiz'}</h4>
+            <h4 className="font-bold text-sm text-slate-900 dark:text-white">{lang === 'fr' ? 'Manuels & Exercices' : 'Textbooks & Drills'}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {lang === 'fr' ? 'Évaluations générées automatiquement avec corrigés détaillés et chronomètre.' : 'Timed exam simulations with automatic grading.'}
+              {lang === 'fr' ? 'Travaillez vos propres cours, manuels scolaires et exercices importés pas-à-pas.' : 'Work on your own imported course files, schoolbooks and exercises.'}
             </p>
           </div>
 
@@ -1491,6 +1528,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Bottom Professional Disclaimer Footer */}
+      <DisclaimerFooter
+        lang={lang}
+        onOpenPrivacy={() => onNavigateTab('privacy-policy')}
+        onOpenTerms={() => onNavigateTab('privacy-policy')}
+        onOpenAccessibility={() => onNavigateTab('accessibility-policy')}
+      />
 
     </div>
   );

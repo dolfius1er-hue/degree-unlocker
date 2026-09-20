@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { SchoolDocument } from '../types';
+import { SchoolDocument, AppLanguage } from '../types';
 import { formatFileSize } from '../utils/colors';
 import { FamousQuote, FAMOUS_QUOTES } from '../data/famousQuotes';
 import { 
@@ -25,7 +25,7 @@ interface PdfUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPdfProcessed: (doc: SchoolDocument) => void;
-  lang?: 'fr' | 'en';
+  lang?: AppLanguage;
 }
 
 export const PdfUploadModal: React.FC<PdfUploadModalProps> = ({

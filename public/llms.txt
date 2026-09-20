@@ -1,0 +1,15 @@
+# Degree Unlocker
+> Degree Unlocker is a high-performance, accessible academic workstation and learning companion designed for students, high schoolers, and lifelong learners.
+
+## Features
+- **Smart Note Taking & Cornell Method**: Structured academic note-taking with automatic summaries, key keywords, and interactive mind maps.
+- **SRS Flashcards & Spaced Repetition**: Leitner-style active recall flashcards with mastery tracking.
+- **Interactive Quizzes & Exams**: Self-testing mode with instant grading, step-by-step solutions, and error analysis.
+- **Accessible & Compliant**: Full WCAG 2.1 AA / ADA accessibility, screen-reader optimized, high contrast, keyboard navigation, and European GDPR data protection (15+ digital age verification).
+- **Zero-Data Sell**: No advertising tracking, local-first offline storage (IndexedDB) with optional encrypted cloud backup.
+
+## Key URLs
+- Homepage: https://degreeunlocker.pages.dev/
+- Privacy Policy: https://degreeunlocker.pages.dev/privacy
+- Terms of Service: https://degreeunlocker.pages.dev/terms
+- Accessibility Statement: https://degreeunlocker.pages.dev/accessibility

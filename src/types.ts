@@ -309,7 +309,7 @@ export interface WordSearchResult {
   fileName?: string;
 }
 
-export type AppLanguage = 'fr' | 'en';
+export type AppLanguage = 'fr' | 'en' | 'de' | 'es';
 
 export type AppTheme = 'light' | 'dark' | 'midnight' | 'paper' | 'hardcore';
 export type MenuPosition = 'left' | 'top';
@@ -332,7 +332,9 @@ export type NavTabType =
   | 'latin'
   | 'tutorial'
   | 'tips'
-  | 'privacy';
+  | 'privacy'
+  | 'accessibility'
+  | 'not_found';
 
 export interface UIPreferences {
   theme: AppTheme;

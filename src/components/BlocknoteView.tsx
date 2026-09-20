@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SchoolDocument, BlocknoteGuide, PaperStyle, HandwritingFont, BlocknoteLine, SourceValidationResult } from '../types';
+import { SchoolDocument, BlocknoteGuide, PaperStyle, HandwritingFont, BlocknoteLine, SourceValidationResult, AppLanguage } from '../types';
 import { getSubjectBadgeClass } from '../utils/colors';
 import { exportNotebookAsPdf } from '../utils/notebookPdfExport';
 import { isTauri } from '../lib/tauri-bridge';
@@ -38,7 +38,7 @@ interface BlocknoteViewProps {
   onUpdateDocumentGuide: (docId: string, guide: BlocknoteGuide) => void;
   onOpenDocSelector: () => void;
   onOpenTutorial?: () => void;
-  lang?: 'fr' | 'en';
+  lang?: AppLanguage;
   onOpenTips?: () => void;
   onOpenVideos?: (subject?: string) => void;
 }

@@ -575,3 +575,135 @@ body.pc-hardcore-onyx,
   scroll-behavior: auto !important;
 }
 
+/* ========================================================================== */
+/* ADA COMPLIANCE & UNIVERSAL ACCESSIBILITY ENHANCEMENTS                      */
+/* ========================================================================== */
+
+/* 1. Font Size Scaling (WCAG 1.4.4 Resize text up to 200%) */
+html.ada-font-large {
+  font-size: 112.5% !important; /* 18px base */
+}
+html.ada-font-xlarge {
+  font-size: 125% !important;   /* 20px base */
+}
+html.ada-font-huge {
+  font-size: 137.5% !important; /* 22px base */
+}
+
+/* 2. Reduced Motion (ADA Title III & WCAG 2.3.3) */
+html.ada-reduce-motion,
+html.ada-reduce-motion *,
+html.ada-reduce-motion *::before,
+html.ada-reduce-motion *::after,
+body.ada-reduce-motion,
+body.ada-reduce-motion * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* 3. High Contrast Light Mode (Stark Black on Pure White, WCAG AAA 7:1+) */
+html.ada-contrast-light {
+  --bg-primary: #ffffff !important;
+  --bg-card: #ffffff !important;
+  --bg-surface: #f8fafc !important;
+  --text-primary: #000000 !important;
+  --text-secondary: #000000 !important;
+  --text-muted: #1e293b !important;
+  --border-color: #000000 !important;
+  --border-subtle: #000000 !important;
+}
+html.ada-contrast-light body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+html.ada-contrast-light [class*="text-slate-"],
+html.ada-contrast-light [class*="text-zinc-"],
+html.ada-contrast-light [class*="text-gray-"] {
+  color: #000000 !important;
+}
+html.ada-contrast-light [class*="border-slate-"],
+html.ada-contrast-light [class*="border-zinc-"],
+html.ada-contrast-light [class*="border-gray-"] {
+  border-color: #000000 !important;
+}
+html.ada-contrast-light .bg-slate-900,
+html.ada-contrast-light .bg-slate-950,
+html.ada-contrast-light .bg-slate-800 {
+  background-color: #f8fafc !important;
+  border-color: #000000 !important;
+}
+
+/* 4. High Contrast Dark Mode (Yellow & White on Onyx Black, WCAG AAA) */
+html.ada-contrast-dark {
+  --bg-primary: #000000 !important;
+  --bg-card: #050505 !important;
+  --bg-surface: #101010 !important;
+  --text-primary: #ffff00 !important;
+  --text-secondary: #ffffff !important;
+  --text-muted: #ffff66 !important;
+  --border-color: #ffff00 !important;
+  --border-subtle: #ffffff !important;
+}
+html.ada-contrast-dark body {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+html.ada-contrast-dark [class*="text-slate-"],
+html.ada-contrast-dark [class*="text-zinc-"],
+html.ada-contrast-dark [class*="text-gray-"],
+html.ada-contrast-dark [class*="text-indigo-"],
+html.ada-contrast-dark [class*="text-emerald-"] {
+  color: #ffff00 !important;
+}
+html.ada-contrast-dark h1,
+html.ada-contrast-dark h2,
+html.ada-contrast-dark h3,
+html.ada-contrast-dark h4 {
+  color: #ffffff !important;
+}
+html.ada-contrast-dark [class*="border-"] {
+  border-color: #ffffff !important;
+}
+html.ada-contrast-dark .bg-slate-900,
+html.ada-contrast-dark .bg-slate-950,
+html.ada-contrast-dark .bg-slate-800,
+html.ada-contrast-dark .bg-white {
+  background-color: #000000 !important;
+  border-color: #ffff00 !important;
+}
+
+/* 5. Monochrome / Grayscale Mode */
+html.ada-contrast-mono {
+  filter: grayscale(100%) !important;
+}
+
+/* 6. Dyslexia-Friendly Font (OpenDyslexic / Readability) */
+html.ada-font-dyslexia body,
+html.ada-font-dyslexia body * {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Arial', sans-serif !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.08em !important;
+}
+
+/* 7. Enhanced Focus Indicator (ADA / WCAG 2.4.7 Focus Visible) */
+html.ada-focus-rings *:focus-visible {
+  outline: 3.5px solid #f59e0b !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.85) !important;
+  border-radius: 4px !important;
+}
+
+/* 8. Relaxed and Expanded Line Spacing (WCAG 1.4.12 Text Spacing) */
+html.ada-spacing-relaxed body,
+html.ada-spacing-relaxed body * {
+  line-height: 1.8 !important;
+}
+html.ada-spacing-expanded body,
+html.ada-spacing-expanded body * {
+  line-height: 2.1 !important;
+  letter-spacing: 0.03em !important;
+}
+
+

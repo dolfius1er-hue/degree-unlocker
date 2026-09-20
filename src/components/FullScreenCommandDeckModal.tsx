@@ -107,19 +107,11 @@ export const FullScreenCommandDeckModal: React.FC<FullScreenCommandDeckModalProp
     },
     {
       id: 'flashcards' as NavTabType,
-      title: isFr ? 'Fiches Mémoire (Anki Spaced Repetition)' : 'Flashcards & Anki Leitner',
-      subtitle: isFr ? 'Mémorisation active avec répétition espacée en 4 boîtes' : 'Spaced repetition system for long-term retention',
+      title: isFr ? 'Fiches Mémoire (Spaced Repetition)' : 'Flashcards & Spaced Repetition',
+      subtitle: isFr ? 'Mémorisation active avec répétition espacée' : 'Spaced repetition system for long-term retention',
       icon: Zap,
       badge: isFr ? 'Neurosciences' : 'Cognitive',
       color: 'from-amber-600 to-orange-700',
-    },
-    {
-      id: 'quiz' as NavTabType,
-      title: isFr ? 'Quiz & Annales Interactives' : 'Quiz & Practice Tests',
-      subtitle: isFr ? 'Auto-évaluation instantanée avec QCM et justifications' : 'Self-assessment with detailed worked corrections',
-      icon: HelpCircle,
-      badge: isFr ? 'Auto-test' : 'Practice',
-      color: 'from-emerald-600 to-teal-800',
     },
     {
       id: 'blocknote' as NavTabType,
@@ -136,22 +128,6 @@ export const FullScreenCommandDeckModal: React.FC<FullScreenCommandDeckModalProp
       icon: Sparkles,
       badge: isFr ? 'Synthèse' : 'Summaries',
       color: 'from-purple-600 to-pink-800',
-    },
-    {
-      id: 'quotes' as NavTabType,
-      title: isFr ? 'Citations & Maximes Philosophiques' : 'Philosophical Quotes & Maxims',
-      subtitle: isFr ? 'Citations d\'auteurs classées par thèmes pour dissertations' : 'Curated quotes for essays and arguments',
-      icon: Quote,
-      badge: isFr ? 'Culture' : 'Culture',
-      color: 'from-rose-600 to-red-800',
-    },
-    {
-      id: 'bilingual' as NavTabType,
-      title: isFr ? 'Atelier Bilingue & Phonétique' : 'Bilingual Lab & Speech',
-      subtitle: isFr ? 'Comparateur bilingue et pratique orale avec synthèse vocale' : 'Parallel bilingual texts and speech training',
-      icon: Languages,
-      badge: isFr ? 'Oral' : 'Oral',
-      color: 'from-teal-600 to-cyan-800',
     },
     {
       id: 'database' as NavTabType,
@@ -191,13 +167,6 @@ export const FullScreenCommandDeckModal: React.FC<FullScreenCommandDeckModalProp
       subject: 'Allemand (Lycée)',
       icon: '🇩🇪',
       desc: 'Les 4 déclinaisons (Nominatif, Accusatif, Datif, Génitif) et verbes forts.',
-    },
-    {
-      id: 'latin' as const,
-      title: 'Atelier Latin & Humanités Classiques',
-      subject: 'Latin & Antiquité',
-      icon: '🏛️',
-      desc: 'Déclinaisons latines, ablatif absolu, étymologie et chefs-d\'œuvre antiques.',
     },
   ];
 

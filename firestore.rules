@@ -52,15 +52,13 @@ service cloud.firestore {
       }
     }
 
-    // Temporary pairing codes for smartphone <-> PC quick link
+    // Temporary pairing codes for smartphone <-> PC quick link (6 uppercase alphanumeric characters)
     match /pairings/{pairingCode} {
-      allow get, create, update: if isValidId(pairingCode);
+      allow get: if pairingCode is string && pairingCode.size() == 6 && pairingCode.matches('^[A-Z0-9]+$');
+      allow create, update: if pairingCode is string && pairingCode.size() == 6 && pairingCode.matches('^[A-Z0-9]+$')
+        && request.resource.data.keys().hasAll(['createdAt', 'updatedAt'])
+        && request.resource.data.size() <= 12;
       allow delete: if isSignedIn();
-    }
-
-    // Connection test document
-    match /test/{docId} {
-      allow read, write: if true;
     }
   }
 }

@@ -14,9 +14,97 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-// Increase JSON payload limit to handle large base64 uploads cleanly (augmented for local storage)
-app.use(express.json({ limit: '150mb' }));
-app.use(express.urlencoded({ extended: true, limit: '150mb' }));
+// -------------------------------------------------------------
+// DEFENSIVE SECURITY: HARDENED HEADERS & PROTOCOL DEFENSE
+// -------------------------------------------------------------
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+  res.removeHeader('X-Powered-By');
+  next();
+});
+
+// -------------------------------------------------------------
+// INTELLIGENT IN-MEMORY RATE LIMITER (SLIDING WINDOW)
+// -------------------------------------------------------------
+interface RateLimitBucket {
+  count: number;
+  resetAt: number;
+}
+const rateLimitStore = new Map<string, RateLimitBucket>();
+
+// Memory leak guard: sweep expired buckets every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateLimitStore.entries()) {
+    if (now > bucket.resetAt) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+function createRateLimiter(options: { windowMs: number; max: number; message: string; keyPrefix: string }) {
+  return (req: Request, res: Response, next: () => void) => {
+    // Only rate-limit API calls
+    if (!req.path.startsWith('/api/')) return next();
+
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
+    const key = `${options.keyPrefix}:${clientIp}`;
+    const now = Date.now();
+
+    let bucket = rateLimitStore.get(key);
+    if (!bucket || now > bucket.resetAt) {
+      bucket = { count: 1, resetAt: now + options.windowMs };
+      rateLimitStore.set(key, bucket);
+      return next();
+    }
+
+    bucket.count += 1;
+    if (bucket.count > options.max) {
+      const retryAfter = Math.ceil((bucket.resetAt - now) / 1000);
+      res.setHeader('Retry-After', retryAfter.toString());
+      return res.status(429).json({
+        error: options.message,
+        retryAfterSeconds: retryAfter,
+      });
+    }
+
+    next();
+  };
+}
+
+// Global API limiter (120 req / minute per IP)
+const generalLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: 'Trop de requêtes vers le serveur. Veuillez patienter un instant.',
+  keyPrefix: 'gen',
+});
+
+// Heavy AI endpoints limiter (25 req / minute per IP)
+const aiGenerationLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 25,
+  message: 'Limite de requêtes IA atteinte (max 25 par minute). Veuillez patienter quelques secondes.',
+  keyPrefix: 'ai',
+});
+
+// File upload limiter (20 uploads / minute per IP)
+const uploadLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: 'Limite de téléversement atteinte (max 20 par minute).',
+  keyPrefix: 'up',
+});
+
+app.use('/api/', generalLimiter);
+
+// Protect payload sizes from Denial of Service (30MB max)
+app.use(express.json({ limit: '30mb' }));
+app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
 // Ensure data directory and local uploads storage folder exist
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -527,7 +615,14 @@ function saveVocabulary(items: any[]) {
 }
 
 // Study streaks persistence helpers
-function loadStreaks(): { activityDates: string[]; currentStreak: number } {
+interface StreaksData {
+  activityDates: string[];
+  currentStreak: number;
+  longestStreak?: number;
+  lastActiveDate?: string;
+}
+
+function loadStreaks(): StreaksData {
   try {
     if (fs.existsSync(STREAKS_FILE)) {
       const data = fs.readFileSync(STREAKS_FILE, 'utf-8');
@@ -536,10 +631,10 @@ function loadStreaks(): { activityDates: string[]; currentStreak: number } {
   } catch (err) {
     console.error('Error reading streaks file:', err);
   }
-  return { activityDates: [], currentStreak: 0 };
+  return { activityDates: [], currentStreak: 0, longestStreak: 0 };
 }
 
-function saveStreaks(streaks: { activityDates: string[]; currentStreak?: number }) {
+function saveStreaks(streaks: StreaksData) {
   try {
     fs.writeFileSync(STREAKS_FILE, JSON.stringify(streaks, null, 2), 'utf-8');
   } catch (err) {
@@ -1262,6 +1357,78 @@ app.get('/api/onedrive/search', (req: Request, res: Response) => {
       resultsCount: results.length,
       results,
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// STREAKS API (Persistent Real Streak Tracking)
+// -------------------------------------------------------------
+app.get('/api/streaks', (req: Request, res: Response) => {
+  try {
+    const streaks = loadStreaks();
+    res.json(streaks);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/streaks', (req: Request, res: Response) => {
+  try {
+    const { date } = req.body;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const streaks = loadStreaks();
+    
+    if (!streaks.activityDates.includes(targetDate)) {
+      streaks.activityDates.push(targetDate);
+    }
+    
+    // Sort unique dates
+    const uniqueDates = Array.from(new Set(streaks.activityDates)).sort();
+    streaks.activityDates = uniqueDates;
+
+    // Calculate real consecutive days
+    let currentStreak = 0;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const hasToday = uniqueDates.includes(todayStr);
+
+    let checkDate = new Date();
+    if (!hasToday) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      const yesterdayStr = checkDate.toISOString().split('T')[0];
+      if (uniqueDates.includes(yesterdayStr)) {
+        while (true) {
+          const dStr = checkDate.toISOString().split('T')[0];
+          if (uniqueDates.includes(dStr)) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+      }
+    } else {
+      while (true) {
+        const dStr = checkDate.toISOString().split('T')[0];
+        if (uniqueDates.includes(dStr)) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+
+    streaks.currentStreak = currentStreak;
+    if (currentStreak > (streaks.longestStreak || 0)) {
+      streaks.longestStreak = currentStreak;
+    }
+    streaks.lastActiveDate = todayStr;
+
+    saveStreaks(streaks);
+    res.json({ success: true, streaks });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -3723,7 +3890,9 @@ app.get('/privacy', (req: Request, res: Response) => {
 
     <h2>5. Suppression et Révocation des accès</h2>
     <p>Vous pouvez révoquer l'accès de Degree Unlocker à votre compte Google à tout moment depuis les paramètres de sécurité de votre compte Google : <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">https://myaccount.google.com/permissions</a>.</p>
-    <p>Pour demander la suppression complète de vos données de nos bases, contactez notre support à : <strong>dolfius1er@gmail.com</strong>.</p>
+
+    <h2>6. Clause de Petite Équipe & Amélioration Quotidienne</h2>
+    <p>Nous sommes une petite équipe indépendante et passionnée. Tout n'est pas encore parfait et nous ne pouvons garantir que tout marchera de façon absolue sur tous les environnements, mais nous améliorons l'application au jour le jour. Si vous avez la moindre remarque, besoin d'une fonctionnalité ou constatez un problème, écrivez-nous directement à : <strong>degreeunlocker.devteam@yahoo.com</strong>.</p>
 
     <footer>
       <p>&copy; 2026 Degree Unlocker. Tous droits réservés. Hébergé sur Google Cloud.</p>
@@ -3752,14 +3921,16 @@ app.get('/terms', (req: Request, res: Response) => {
 <body>
   <div class="container">
     <h1>Conditions d'Utilisation / Terms of Service</h1>
-    <p><strong>Dernière mise à jour :</strong> 6 septembre 2026</p>
+    <p><strong>Dernière mise à jour :</strong> Septembre 2026</p>
     <p>L'utilisation du service <strong>Degree Unlocker</strong> implique l'acceptation pleine et entière des présentes conditions.</p>
     <h2>1. Objet du Service</h2>
     <p>Degree Unlocker est un outil d'assistance pédagogique permettant aux étudiants d'organiser leurs cours, d'importer leurs documents depuis Google Drive et de générer des synthèses d'apprentissage assistées par IA.</p>
-    <h2>2. Responsabilité de l'utilisateur</h2>
+    <h2>2. Clause de Transparence & Amélioration Continue</h2>
+    <p>Le service est développé par une petite équipe indépendante. Tout n'est pas parfait et des ajustements sont déployés régulièrement. En cas de besoin ou de suggestion, contactez directement l'équipe.</p>
+    <h2>3. Responsabilité de l'utilisateur</h2>
     <p>L'utilisateur est seul responsable du contenu des cours et documents importés. L'utilisateur s'engage à respecter les droits d'auteur et la propriété intellectuelle des documents pédagogiques.</p>
-    <h2>3. Contact</h2>
-    <p>Pour toute question relative aux conditions de service, contactez : <strong>dolfius1er@gmail.com</strong>.</p>
+    <h2>4. Contact</h2>
+    <p>Pour toute question relative aux conditions de service, contactez : <strong>degreeunlocker.devteam@yahoo.com</strong>.</p>
   </div>
 </body>
 </html>`);

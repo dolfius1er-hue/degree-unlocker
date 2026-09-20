@@ -29,7 +29,7 @@ import {
   BookMarked
 } from 'lucide-react';
 
-export type NotionSubjectKey = 'espagnol' | 'allemand' | 'latin' | 'francais' | 'philosophie';
+export type NotionSubjectKey = 'espagnol' | 'allemand' | 'francais' | 'philosophie';
 
 interface NotionSubjectWorkspaceModalProps {
   isOpen: boolean;
@@ -248,78 +248,6 @@ Exemple :
           explanation: 'Le verbe conjugué "ist" se place tout à la fin après la conjonction "weil".',
           antiCheatClue: 'Le sujet "er" demande la 3e personne du verbe sein à l\'indicatif présent : "ist".'
         }
-      }
-    ]
-  },
-  latin: {
-    name: 'Latin & Grec (Antiquité)',
-    flagEmoji: '🏛️',
-    coverGradient: 'from-emerald-700 via-teal-800 to-slate-950',
-    accentColor: 'emerald',
-    description: 'Cahier Notion de Langues et Cultures de l\'Antiquité : 5 Déclinaisons latines, Cas et fonctions, Versions guidées (Cicéron, Virgile, Sénèque) et Étymologie.',
-    subPages: [
-      {
-        id: 'la-p1',
-        category: 'rule',
-        categoryLabel: 'Règle Grammaticale',
-        categoryIcon: '📏',
-        title: 'Les 6 Cas Latins & Leurs Fonctions dans la Phrase',
-        subtitle: 'Nominatif, Vocatif, Accusatif, Génitif, Datif, Ablatif',
-        levelBadge: 'Lycée & Collège',
-        contentMarkdown: `### Fonctions canoniques des cas latins :
-1. **Nominatif** : Sujet et Attribut du sujet (*Rosa pulchra est* -> La rose est belle).
-2. **Vocatif** : Apostrophe, interpellation directe (*O Marce !* -> Ô Marcus !).
-3. **Accusatif** : Complément d'Objet Direct (COD) et complément de lieu avec mouvement (*Librum lego* -> Je lis un livre).
-4. **Génitif** : Complément du nom / Possession (*Liber Marci* -> Le livre de Marcus).
-5. **Datif** : Complément d'Objet Indirect (COI) / Attribution (*Librum Marco do* -> Je donne un livre à Marcus).
-6. **Ablatif** : Complément Circonstanciel (moyen, manière, temps, lieu sans mouvement, cause) (*Gladio pugnat* -> Il combat avec une épée).`,
-        keyTakeaways: [
-          'Le latin n\'a pas d\'articles : le cas indique directement la fonction du mot.',
-          'L\'Ablatif traduit la plupart de nos compléments circonstanciels avec ou sans préposition.'
-        ],
-        interactiveExercise: {
-          instruction: 'Identifiez le cas du mot "gladio" dans la phrase "Miles gladio pugnat" (Le soldat combat avec une épée) :',
-          question: 'Quel est le cas de "gladio" et sa fonction ?',
-          options: ['Ablatif (complément circonstanciel de moyen)', 'Accusatif (COD)', 'Nominatif (sujet)', 'Génitif (complément du nom)'],
-          correctIndex: 0,
-          explanation: '"gladio" est à l\'ablatif singulier de la 2e déclinaison (gladius, i, m). Il exprime le moyen avec lequel le soldat combat.',
-          antiCheatClue: 'Posez-vous la question : avec quoi combat-il ? Moyen = Ablatif.'
-        },
-        tableData: {
-          headers: ['Cas', '1ère Déclinaison (Rosa, ae, f)', '2e Déclinaison (Dominus, i, m)', '3e Déclinaison (Consul, is, m)'],
-          rows: [
-            ['Nom. Sg.', 'rosa', 'dominus', 'consul'],
-            ['Acc. Sg.', 'rosam', 'dominum', 'consulem'],
-            ['Gén. Sg.', 'rosae', 'domini', 'consulis'],
-            ['Dat. Sg.', 'rosae', 'domino', 'consuli'],
-            ['Abl. Sg.', 'rosa', 'domino', 'consule'],
-            ['Nom. Pl.', 'rosae', 'domini', 'consules'],
-            ['Acc. Pl.', 'rosas', 'dominos', 'consules'],
-            ['Gén. Pl.', 'rosarum', 'dominorum', 'consulum']
-          ]
-        }
-      },
-      {
-        id: 'la-p2',
-        category: 'quote',
-        categoryLabel: 'Texte & Citation',
-        categoryIcon: '🏛️',
-        title: 'Maximes et Penseurs Romains : Cicéron et Sénèque',
-        subtitle: 'Citations latines célèbres traduites et analysées',
-        levelBadge: 'Humanités',
-        contentMarkdown: `### 1. Sénèque (*Lettres à Lucilius*)
-> *"Non scholae, sed vitae discimus."*
-> **Traduction** : Nous n'apprenons pas pour l'école, mais pour la vie.
-> **Analyse syntaxique** : *Non... sed* (non pas... mais) ; *vitae* et *scholae* au Datif d'attribution ; *discimus* 1ère personne du pluriel du présent de l'indicatif.
-
-### 2. Cicéron (*De Re Publica*)
-> *"Salus populi suprema lex esto."*
-> **Traduction** : Que le salut du peuple soit la loi suprême.
-> **Analyse syntaxique** : *esto* = impératif futur du verbe être (sens solennel et juridique) ; *salus populi* = sujet + complément du nom au génitif singulier.`,
-        keyTakeaways: [
-          'La concision latine exprime une densité philosophique majeure.',
-          'Idéal pour enrichir vos dissertations de Français et Philosophie.'
-        ]
       }
     ]
   },

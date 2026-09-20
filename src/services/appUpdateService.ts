@@ -54,7 +54,7 @@ class AppUpdateService {
 
     this.latestUpdateInfo.currentVersion = this.currentVersion;
 
-    // Register SW event handlers
+    // Register SW event handlers (no unprompted auto-reload)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then((reg) => {
         if (reg) {
@@ -71,10 +71,6 @@ class AppUpdateService {
             }
           };
         }
-      });
-
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
       });
     }
 
