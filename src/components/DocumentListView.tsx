@@ -256,6 +256,12 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
 
   // Filtered documents
   const filteredDocs = documents.filter(doc => {
+    // Filter out blank/untitled document stubs
+    const t = (doc.title || '').trim().toLowerCase();
+    if (!t || t === 'document sans titre' || t === 'sans titre' || t === 'untitled') {
+      if (!doc.content || doc.content.trim() === '') return false;
+    }
+
     // Subject filter
     if (selectedSubject !== 'all' && doc.subject?.toLowerCase() !== selectedSubject.toLowerCase()) {
       return false;

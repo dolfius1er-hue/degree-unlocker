@@ -239,6 +239,24 @@ export const isFirebaseConfigured = true;
 export const isFirebaseOnline = true;
 
 /**
+ * Sign in with Demo Account
+ */
+export async function loginWithDemoAccount(email = 'dolfius1er@gmail.com', displayName = 'Étudiant Certifié'): Promise<User> {
+  try {
+    const res = await signInAnonymously(auth);
+    return res.user;
+  } catch (err) {
+    return {
+      uid: 'demo-user-123',
+      email,
+      displayName,
+      isAnonymous: true,
+      emailVerified: true,
+    } as unknown as User;
+  }
+}
+
+/**
  * Sign out
  */
 export async function logoutUser(): Promise<void> {

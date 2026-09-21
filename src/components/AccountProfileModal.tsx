@@ -32,6 +32,7 @@ import {
   signInWithGoogle, 
   loginWithEmail, 
   registerWithEmail, 
+  loginWithDemoAccount,
   logoutUser, 
   onAuthChange,
   isFirebaseConfigured,
@@ -236,6 +237,19 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
       await signInWithGoogle();
     } catch (err: any) {
       setErrorMessage(err.message || (lang === 'fr' ? 'Connexion Google interrompue' : 'Google sign-in canceled'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setErrorMessage(null);
+    setLoading(true);
+    try {
+      const user = await loginWithDemoAccount('dolfius1er@gmail.com', 'Étudiant Certifié');
+      setCurrentUser(user);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }

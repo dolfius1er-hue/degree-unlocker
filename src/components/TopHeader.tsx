@@ -181,10 +181,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     >
       
       {/* Top Bar Row - Search Bar, Focus Timer, Actions and Window Controls */}
-      <div className="h-16 flex items-center justify-between gap-2 sm:gap-3">
+      <div className="h-16 flex items-center justify-between gap-2 sm:gap-3 overflow-hidden">
         
         {/* Left: 3-line hamburger menu button + Search bar */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-xl">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-lg">
           {/* Circular 3-line button directly controlling the sidebar */}
           <button
             id="btn-toggle-sidebar"
@@ -224,13 +224,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               data-no-drag
               value={headerSearchQuery}
               onChange={(e) => setHeaderSearchQuery(e.target.value)}
-              onFocus={() => {
-                // Keep input responsive
-              }}
               placeholder={lang === 'fr' 
-                ? 'Rechercher cours, notions, fiches...' 
-                : 'Search notes, concepts, flashcards...'}
-              className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 font-medium"
+                ? 'Rechercher cours, notions...' 
+                : 'Search notes, concepts...'}
+              className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 font-medium truncate"
             />
             {headerSearchQuery && (
               <button
@@ -271,27 +268,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 soundFx.playClick(920);
                 onOpenLiteOptimizer();
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95 group"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95 group"
               title={lang === 'fr' ? 'Optimiseur Degree Unlocker Lite & Systèmes' : 'Degree Unlocker Lite Optimizer & Systems'}
             >
               <Zap className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
               <span className="font-mono tracking-tight font-black">LITE ⚡</span>
-            </button>
-          )}
-
-          {/* Quantum Studio & Focus Soundscape Button */}
-          {onOpenSoundHUD && (
-            <button
-              id="btn-sound-hud-topheader"
-              onClick={() => {
-                soundFx.playClick(850);
-                onOpenSoundHUD();
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-indigo-500/15 to-amber-500/15 hover:from-amber-500/25 hover:to-indigo-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95 group"
-              title={lang === 'fr' ? 'Ouvrir le Studio Quantique (Ondes Alpha, Thêta, Pluie & Synthétiseur)' : 'Open Quantum Focus Audio Studio'}
-            >
-              <Headphones className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline font-mono tracking-tight font-black">FLOW 🎧</span>
             </button>
           )}
 
@@ -329,7 +310,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <button
               id="btn-install-app-topheader"
               onClick={onOpenInstallGuide}
-              className={`flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer ${
+              className={`hidden lg:flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer ${
                 isPwaInstalled
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
                   : 'bg-indigo-600 hover:bg-indigo-500 text-white'
@@ -337,7 +318,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               title={isPwaInstalled ? (lang === 'fr' ? 'Application PC active sur cet appareil' : 'PC Application active on this device') : (lang === 'fr' ? 'Télécharger l\'application PC & Launcher' : 'Download PC Application & Launcher')}
             >
               <Smartphone className={`w-3.5 h-3.5 ${isPwaInstalled ? 'text-emerald-400' : 'text-indigo-200'}`} />
-              <span className="hidden md:inline">
+              <span className="hidden lg:inline">
                 {isPwaInstalled 
                   ? (lang === 'fr' ? 'App PC Active ✅' : 'PC App Active ✅') 
                   : (lang === 'fr' ? 'App PC 💻' : 'PC App 💻')}

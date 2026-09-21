@@ -185,8 +185,8 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                 </p>
                 <p className="text-xs text-indigo-300/90 leading-relaxed">
                   {isFr
-                    ? "L'accès direct autonome à Degree Unlocker Lite est réservé aux élèves âgés d'au moins 15 ans révolus (seuil de la majorité numérique en France et UE). En conformité stricte avec le COPPA américain (15 U.S.C. § 6501-6506), aucune donnée personnelle d'enfant de moins de 13 ans n'est collectée, conservée ni commercialisée. Tout mineur utilisant la plateforme sous supervision scolaire ou parentale bénéficie du droit d'effacement immédiat sur simple demande à degreeunlocker.devteam@yahoo.com."
-                    : "Direct standalone access is intended for users aged 15 and above. In strict compliance with COPPA (15 U.S.C. § 6501-6506) and GDPR Article 8, no personal data from children under 13 is knowingly collected, tracked, or sold. Any school-supervised account data can be permanently erased upon request at degreeunlocker.devteam@yahoo.com."}
+                    ? "L'accès direct autonome à Degree Unlocker Lite est réservé aux élèves âgés d'au moins 15 ans révolus (seuil de la majorité numérique en France et UE). En conformité stricte avec l'article 8 du RGPD et le COPPA américain, aucune donnée personnelle d'enfant n'est collectée, conservée ni commercialisée sans accord légal. Tout mineur utilisant la plateforme sous supervision scolaire ou parentale bénéficie du droit d'effacement immédiat sur simple demande à degreeunlocker.devteam@yahoo.com."
+                    : "Direct standalone access is intended for users aged 15 and above. In strict compliance with GDPR Article 8 and COPPA, no personal data from children is knowingly collected, tracked, or sold. Any school-supervised account data can be permanently erased upon request at degreeunlocker.devteam@yahoo.com."}
                 </p>
               </div>
 
@@ -229,7 +229,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                 </p>
                 <div className="flex items-center gap-2 font-mono text-xs font-bold text-amber-300">
                   <span>degreeunlocker.devteam@yahoo.com</span>
-                  <span className="text-slate-500 font-sans">| Délégué : dolfius1er@gmail.com</span>
+                  <span className="text-slate-500 font-sans">| Délégué (DPO) : dolfius1er@gmail.com</span>
                 </div>
               </div>
             </>
@@ -376,7 +376,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                     : "If you are a copyright owner and believe content hosted infringes your intellectual property, please submit a formal DMCA takedown notice to our designated agent. We enforce an expedited takedown policy."}
                 </p>
                 <div className="p-2.5 rounded-xl bg-black/40 border border-rose-500/20 font-mono text-[11px] text-rose-300">
-                  Contact Agent DMCA : <strong>degreeunlocker.devteam@yahoo.com</strong>
+                  Contact Agent DMCA / Propriété intellectuelle : <strong>degreeunlocker.devteam@yahoo.com</strong>
                 </div>
               </div>
             </>

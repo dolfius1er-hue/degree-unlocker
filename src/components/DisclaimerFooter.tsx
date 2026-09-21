@@ -77,7 +77,7 @@ export const DisclaimerFooter: React.FC<DisclaimerFooterProps> = ({
             <p>
               {isFr ? (
                 <>
-                  <strong>Degré Unlocker</strong> est propulsé par une <strong>petite équipe indépendante et passionnée</strong> dédiée à la réussite scolaire et universitaire. L’application fait l’objet de déploiements et d’améliorations au jour le jour. Bien que nous mettions tout en œuvre pour offrir une expérience fluide, des ajustements mineurs peuvent survenir selon vos navigateurs ou configurations matérielles.
+                  <strong>Degree Unlocker</strong> est propulsé par une <strong>petite équipe indépendante et passionnée</strong> dédiée à la réussite scolaire et universitaire. L’application fait l’objet de déploiements et d’améliorations au jour le jour. Bien que nous mettions tout en œuvre pour offrir une expérience fluide, des ajustements mineurs peuvent survenir selon vos navigateurs ou configurations matérielles.
                 </>
               ) : (
                 <>

@@ -94,10 +94,11 @@ export interface IngestedDesktopDocument {
  */
 export const isTauri = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return (
-    '__TAURI__' in window ||
-    '__TAURI_IPC__' in window ||
-    '__TAURI_METADATA__' in window
+  return Boolean(
+    (window as any).__TAURI_INTERNALS__ ||
+    (window as any).__TAURI__ ||
+    (window as any).__TAURI_IPC__ ||
+    (window as any).__TAURI_METADATA__
   );
 };
 

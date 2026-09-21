@@ -874,19 +874,7 @@ export const PcWorkstationPillBanner: React.FC<PcWorkstationPillBannerProps> = (
               <span>{lang === 'fr' ? 'Changer de Modèle (1-3)' : 'Switch Model (1-3)'}</span>
             </button>
 
-            {onOpenSoundHUD && (
-              <button
-                onClick={() => {
-                  soundFx.playClick(850);
-                  onOpenSoundHUD();
-                }}
-                className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-indigo-600/30 to-amber-500/20 hover:from-amber-500/35 hover:to-indigo-500/40 text-amber-300 font-bold text-xs transition-all border border-amber-400/40 cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-500/10 group"
-                title={lang === 'fr' ? 'Activer le Studio Audio & Fréquences Alpha/Thêta' : 'Activate Quantum Focus Audio Studio'}
-              >
-                <Headphones className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform animate-pulse" />
-                <span>{lang === 'fr' ? 'Studio Focus 🎧' : 'Focus Studio 🎧'}</span>
-              </button>
-            )}
+            {/* Switch Mode Button */}
 
             {onOpenInstallGuide && (
               <button

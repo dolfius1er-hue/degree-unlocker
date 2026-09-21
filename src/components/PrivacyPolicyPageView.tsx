@@ -33,76 +33,76 @@ export const PrivacyPolicyPageView: React.FC<PrivacyPolicyPageViewProps> = ({
 
   const privacyPoints = [
     {
-      title: isFr ? '1. Stockage 100% Local (IndexedDB / LocalStorage)' : '1. 100% Local Storage',
+      title: isFr ? '1. Stockage Local par Défaut & Synchronisation Cloud Chiffrée' : '1. Local-First Storage & Optional Cloud Sync',
       icon: HardDrive,
       color: 'text-indigo-400',
       description: isFr
-        ? 'Tous vos cours, résumés, notes Cornell manuscrites, fiches de révision Anki et exercices sont enregistrés exclusivement dans le stockage local de votre navigateur ou de votre application. Aucune base de données centrale ne collecte vos écrits personnels.'
-        : 'All notes, Cornell files, Anki decks, and textbook exercise records remain stored strictly within your browser/desktop local client storage.',
+        ? 'Par défaut, vos cours, fiches, flashcards et notes sont stockés exclusivement sur votre appareil (IndexedDB / LocalStorage). Si vous choisissez de vous connecter avec un compte, une copie synchronisée et chiffrée est créée sur nos serveurs européens Google Cloud Firebase afin de vous permettre d’accéder à vos révisions depuis votre ordinateur et votre smartphone.'
+        : 'By default, your notes, decks, and study files are stored locally on your device. When you log in, encrypted synchronization copies are stored on EU-based Google Cloud Firebase to enable seamless cross-device revision between desktop and mobile.',
     },
     {
-      title: isFr ? '2. Protection des Enfants & Majorité Numérique (COPPA & RGPD-K)' : "2. Children's Safety & COPPA Compliance",
+      title: isFr ? '2. Majorité Numérique (15 Ans) & Protection des Élèves' : "2. Digital Age of Consent (15+) & Student Safety",
       icon: UserCheck,
       color: 'text-rose-400',
       description: isFr
-        ? 'Conformément au COPPA américain (15 U.S.C. § 6501-6506) et à l\'article 8 du RGPD, l\'application ne collecte sciemment aucune donnée personnelle d\'enfants de moins de 13 ans. Zéro ciblage publicitaire, zéro profilage comportemental.'
-        : 'In strict adherence to COPPA and GDPR Article 8, no personal data from minors under 13 is collected or monetized. Zero behavioral tracking or advertising.',
+        ? 'Conformément à la loi française sur la majorité numérique (loi n° 2018-493) et à l’article 8 du RGPD, l’accès autonome est fixé à 15 ans révolus. Pour les élèves de moins de 15 ans, l’utilisation requiert l’accord d’un parent ou représentant légal. Aucune donnée d’élève n’est revendue ni profilée à des fins publicitaires.'
+        : 'In accordance with French digital age regulations and GDPR Article 8, standalone use is for students 15 years and older, or with parental/educator consent. Zero advertising profiling.',
     },
     {
-      title: isFr ? '3. Accessibilité Universelle & Normes ADA Title III / Section 508' : '3. Universal ADA Title III & Section 508 Accessibility',
+      title: isFr ? '3. Accessibilité Numérique (RGAA & WCAG 2.1 AA)' : '3. Accessibility Standards (RGAA & WCAG 2.1 AA)',
       icon: Accessibility,
       color: 'text-emerald-400',
       description: isFr
-        ? 'Degree Unlocker Lite applique les critères WCAG 2.1 AA/AAA : navigation intégrale au clavier, support des polices DYS (OpenDyslexic, Luciole), synthèse vocale Text-to-Speech et respect du mode mouvement réduit.'
-        : 'Full compliance with WCAG 2.1 AA/AAA, keyboard operability, DYS dyslexia typography, Text-to-Speech audio engine, and reduced motion sensitivity.',
+        ? 'Degree Unlocker respecte les recommandations du RGAA et WCAG 2.1 niveau AA : navigation intégrale au clavier, polices adaptées aux élèves dyslexiques (OpenDyslexic), synthèse vocale, contrastes élevés et respect des préférences de mouvement réduit.'
+        : 'Degree Unlocker adheres to RGAA and WCAG 2.1 AA accessibility guidelines: full keyboard navigation, dyslexia-friendly typography, high contrast ratios, and reduced motion settings.',
     },
     {
-      title: isFr ? '4. Confidentialité & Absence de Pistage Tiers' : '4. No Third-Party Tracking',
+      title: isFr ? '4. Absence Totale de Pistage & Publicité' : '4. Zero Tracking & No Commercial Ads',
       icon: EyeOff,
       color: 'text-emerald-400',
       description: isFr
-        ? 'Degree Unlocker Lite ne vend, ne loue et ne partage aucune de vos données scolaires ou personnelles avec des régies publicitaires. Il n\'y a aucun traceur commercial ni cookie tiers intrusif.'
-        : 'No telemetry, advertising cookies, or commercial trackers are integrated.',
+        ? 'L’application ne contient aucun traceur publicitaire, aucun cookie marketing tiers et ne revend aucune donnée scolaire. Vos révisions restent strictement privées.'
+        : 'Zero commercial ads, zero marketing cookies, and zero sale of academic data.',
     },
     {
       title: isFr ? '5. Traitement IA Éthique & Sans Réentraînement' : '5. Ethical AI & Zero Model Re-training',
       icon: Cpu,
       color: 'text-amber-400',
       description: isFr
-        ? 'Lorsque vous sollicitez une synthèse de cours ou une extraction de notions, le texte transmis est traité de manière éphémère par l\'API Gemini côté serveur sécurisé et n\'est jamais conservé ni utilisé pour réentraîner des modèles publics.'
-        : 'When requesting an AI summary, text is handled ephemerally via secure server routes and never retained for public model training.',
+        ? 'Les fonctionnalités d’aide à la révision et de résumé s’appuient sur l’API Gemini de manière strictement éphémère. Vos cours ne sont jamais utilisés pour entraîner ou réentraîner des modèles publics tiers.'
+        : 'Course summaries and study aids use the Gemini API ephemerally. Your study notes are never used to train public machine learning models.',
     },
     {
-      title: isFr ? '6. Souveraineté Éducative (FERPA & SOPIPA)' : '6. Student Data Sovereignty (FERPA)',
+      title: isFr ? '6. Souveraineté & Portabilité des Données (Art. 20 RGPD)' : '6. Data Sovereignty & Portability (Art. 20 GDPR)',
       icon: FileCheck,
       color: 'text-sky-400',
       description: isFr
-        ? 'Vous restez l\'unique propriétaire de l\'intégralité de vos cours et devoirs selon les principes du Student Privacy Pledge. Vous pouvez à tout moment exporter votre base complète au format JSON ou PDF.'
-        : 'You retain full ownership under FERPA and Student Privacy Pledge standards. Export your entire academy database anytime in JSON or individual notes in PDF.',
+        ? 'Vous restez le propriétaire exclusif de l’ensemble de vos cours et fiches. Vous pouvez à tout moment exporter l’intégralité de vos données au format standard JSON ou télécharger vos fiches en PDF d’un simple clic.'
+        : 'You own 100% of your coursework. Export your entire study database anytime in standard JSON format or download individual sheets as PDF.',
     },
     {
-      title: isFr ? '7. Licences Typographiques Libres (OFL 1.1 / Apache 2.0)' : '7. Open Font Licensing & IP Clearance',
-      icon: Code2,
+      title: isFr ? '7. Droits RGPD, Délégué aux Données & Réclamation CNIL' : '7. GDPR Rights & CNIL Redress',
+      icon: Scale,
       color: 'text-purple-400',
       description: isFr
-        ? 'Toutes les polices de caractères utilisées (Outfit, Plus Jakarta Sans, Caveat, Kalam, Patrick Hand, OpenDyslexic, JetBrains Mono) sont certifiées sous licences libres (SIL OFL-1.1 / Apache 2.0) sans aucun risque de litige de droits d\'auteur.'
-        : 'All integrated fonts are cleared and licensed under SIL Open Font License 1.1 or Apache 2.0 for legitimate distribution.',
+        ? 'Vous disposez d’un droit d’accès, de rectification, de portabilité et d’effacement immédiat de vos données (art. 15 à 21 RGPD). Pour toute question, contactez notre équipe à degreeunlocker.devteam@yahoo.com (DPO : dolfius1er@gmail.com). Vous pouvez également introduire une réclamation auprès de la CNIL (cnil.fr).'
+        : 'You hold full rights of access, rectification, portability, and permanent erasure under GDPR Articles 15-21. Reach our team at degreeunlocker.devteam@yahoo.com (DPO: dolfius1er@gmail.com). You may also lodge a complaint with the CNIL data authority (cnil.fr).',
     },
     {
-      title: isFr ? '8. Non-Recours Collectif & Règlement Amiable' : '8. Dispute Resolution & Class Action Waiver',
+      title: isFr ? '8. Avertissement Pédagogique (Pas de Délivrance de Diplôme)' : '8. Academic Disclaimer (No Degree Issuance)',
       icon: Scale,
       color: 'text-indigo-400',
       description: isFr
-        ? 'En utilisant l\'application, les utilisateurs acceptent de soumettre tout différend à un règlement amiable direct et renoncent expressément à engager toute action collective ou recours en classe de plaignants.'
-        : 'Users agree to good-faith individual dispute resolution with the development team and waive rights to participate in class-action lawsuits.',
+        ? 'Degree Unlocker est un outil logiciel d’organisation et de révision méthodologique. L’application n’est pas un établissement d’enseignement et ne délivre aucun diplôme officiel, certification d’État ni validation académique.'
+        : 'Degree Unlocker is a private revision and study workflow application. It is not an educational institution and does not issue any diplomas or official state certifications.',
     },
     {
-      title: isFr ? '9. Clause de Petite Équipe, Transparence & Amélioration Quotidienne' : '9. Small Team & Continuous Daily Improvements',
+      title: isFr ? '9. Contact Officiel & Support Pédagogique' : '9. Official Contact & Support',
       icon: UserCheck,
       color: 'text-amber-400',
       description: isFr
-        ? 'Nous sommes une petite équipe indépendante et passionnée. Tout n\'est pas parfait et nous ne pouvons garantir une absence totale d\'anomalies selon vos équipements, mais nous améliorons l\'application au jour le jour. Si vous avez besoin de quoi que ce soit ou rencontrez un problème, écrivez-nous à degreeunlocker.devteam@yahoo.com.'
-        : 'We are a small, dedicated independent team. Not everything is flawless yet, but we iterate and improve daily. Reach out anytime at degreeunlocker.devteam@yahoo.com if you encounter any issue or need a specific accommodation.',
+        ? 'Une question, une suggestion pédagogique ou un besoin d’aménagement d’accessibilité ? Écrivez à notre équipe à degreeunlocker.devteam@yahoo.com. Nous répondons à toutes les demandes avec bienveillance.'
+        : 'Questions or accessibility accommodation requests? Contact our team anytime at degreeunlocker.devteam@yahoo.com.',
     },
   ];
 
@@ -121,7 +121,7 @@ export const PrivacyPolicyPageView: React.FC<PrivacyPolicyPageViewProps> = ({
 
         <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>{isFr ? 'Conformité RGPD, ADA, COPPA & FERPA' : 'GDPR, ADA, COPPA & FERPA Compliant'}</span>
+          <span>{isFr ? 'Protection RGPD & Accessibilité RGAA / WCAG 2.1 AA' : 'GDPR & RGAA / WCAG 2.1 AA Compliant'}</span>
         </span>
       </div>
 
@@ -130,21 +130,21 @@ export const PrivacyPolicyPageView: React.FC<PrivacyPolicyPageViewProps> = ({
         <div className="space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 text-xs font-black uppercase tracking-wider">
             <Lock className="w-4 h-4 text-emerald-400" />
-            <span>{isFr ? 'Protection Juridique & Confidentialité' : 'Legal & Privacy Compliance'}</span>
+            <span>{isFr ? 'Protection Juridique & Données Personnelles' : 'Legal & Privacy Compliance'}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            {isFr ? 'Charte de Confidentialité, Accessibilité ADA & Sécurité' : 'Privacy, ADA Accessibility & Student Safety'}
+            {isFr ? 'Charte de Confidentialité & Engagement RGPD' : 'Privacy Policy & GDPR Statement'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
             {isFr
-              ? 'Vos cours, vos devoirs et vos réflexions vous appartiennent. Notre architecture est conçue dès le départ pour préserver votre vie privée, respecter les normes d\'accessibilité universelles ADA et garantir la protection des mineurs.'
-              : 'Your coursework and personal notes belong exclusively to you. Our architecture is designed from the ground up for strict privacy, full ADA accessibility, and children’s online safety.'}
+              ? 'Vos cours, vos devoirs et vos réflexions vous appartiennent. Notre architecture est conçue dès le départ pour préserver votre vie privée (stockage local en priorité), respecter les normes d\'accessibilité universelles RGAA et garantir la protection des élèves.'
+              : 'Your coursework and personal notes belong exclusively to you. Our architecture is designed from the ground up for strict privacy, full accessibility, and student safety.'}
           </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-black/40 border border-white/10 text-center shrink-0">
-          <div className="text-emerald-400 font-mono text-sm font-bold">100% Chiffré Local</div>
-          <div className="text-[11px] text-slate-400 mt-1">ADA &bull; COPPA &bull; RGPD</div>
+          <div className="text-emerald-400 font-mono text-sm font-bold">Local par défaut</div>
+          <div className="text-[11px] text-slate-400 mt-1">RGPD &bull; RGAA &bull; 15 ans</div>
         </div>
       </div>
 
@@ -179,12 +179,12 @@ export const PrivacyPolicyPageView: React.FC<PrivacyPolicyPageViewProps> = ({
       <div className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800 space-y-3 text-xs text-slate-300">
         <div className="flex items-center gap-2 font-bold text-white text-sm">
           <AlertCircle className="w-4 h-4 text-amber-400" />
-          <span>{isFr ? 'Contact Officiel, Agent DMCA & Référent Accessibilité ADA' : 'Official Contacts, DMCA Agent & ADA Officer'}</span>
+          <span>{isFr ? 'Contact Officiel, Délégué aux Données & Référent Accessibilité' : 'Official Contacts, DPO & Accessibility Officer'}</span>
         </div>
         <p className="leading-relaxed text-slate-400">
           {isFr
-            ? 'Pour toute demande d\'effacement de données, signalement d\'un obstacle d\'accessibilité (ADA/Section 508), notification de retrait de droit d\'auteur (DMCA) ou question relative à la protection des mineurs, contactez notre équipe officielle avec réponse garantie sous 48h :'
-            : 'For data deletion requests, accessibility barrier reports (ADA/Section 508), DMCA copyright notifications, or minor privacy inquiries, contact our team with guaranteed 48-hour response:'}
+            ? 'Pour toute demande d’exercice de vos droits RGPD (accès, effacement, portabilité), signalement d’un aménagement d’accessibilité (RGAA / WCAG 2.1 AA) ou question relative à la confidentialité des élèves, contactez directement notre équipe :'
+            : 'For GDPR rights requests (access, erasure, portability), accessibility reports (RGAA / WCAG 2.1 AA), or student data inquiries, contact our team directly:'}
         </p>
         <div className="flex flex-wrap items-center gap-4 font-mono text-xs pt-1">
           <a

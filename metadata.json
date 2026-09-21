@@ -1,6 +1,6 @@
 {
   "name": "Degree Unlocker Lite",
-  "description": "Degree Unlocker Lite: Lightweight, ultra-fast academic workstation optimized for rapid study, instant offline note access, SRS flashcards, authentic exam quizzes, and fluid zero-lag revision.",
+  "description": "Degree Unlocker Lite : Station d'organisation et de révision scolaire pour collégiens, lycéens et étudiants. Flashcards SRS, synthèses Cornell et méthodologie (ne délivre aucun diplôme officiel).",
   "requestFramePermissions": [
     "camera",
     "microphone"

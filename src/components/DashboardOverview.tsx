@@ -232,68 +232,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [newNotePriority, setNewNotePriority] = useState<'high' | 'medium' | 'normal'>('high');
   const [newNoteContent, setNewNoteContent] = useState('');
 
-  // Curated fallback pinned notes to guarantee an immediate 9/10 experience
-  const defaultCuratedPinnedNotes = React.useMemo<SchoolDocument[]>(() => [
-    {
-      id: 'curated-pin-bac',
-      title: lang === 'fr' ? '🎯 Méthodologie Bac 2025 : Dissertation & Grand Oral' : '🎯 Baccalaureate 2025 Methodology: Essay & Oral Exam',
-      subject: lang === 'fr' ? 'Méthodologie' : 'Methodology',
-      date: new Date().toISOString().split('T')[0],
-      type: 'typed_note',
-      tags: ['Bac 2025', 'Prioritaire', 'Oral'],
-      content: lang === 'fr'
-        ? '• Structure dissertation : Problématique, Thèse, Antithèse, Dépassement / Synthèse.\n• Grand Oral : 5 min exposé debout sans notes, 10 min échange avec le jury, 5 min projet.\n• Règle d\'or : Toujours définir les termes clés de l\'énoncé dès l\'introduction.'
-        : '• Essay structure: Problem statement, Thesis, Antithesis, Synthesis.\n• Grand Oral: 5 min standing presentation without notes, 10 min Q&A with jury.\n• Golden Rule: Always define key terms in the introduction.',
-      summary: lang === 'fr'
-        ? 'Structure dissertation et conduite du Grand Oral du Bac 2025 : temps de parole, problématisation et règles d\'or.'
-        : 'Essay structure and Grand Oral guidelines: timing, problem formulation, and key rules.',
-      isPinned: true,
-      pinColor: 'amber',
-      pinPriority: 'high',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'curated-pin-math',
-      title: lang === 'fr' ? '⚡ Formules Clés : Dérivation, Logarithmes & Suites' : '⚡ Key Formulas: Derivatives, Logarithms & Sequences',
-      subject: lang === 'fr' ? 'Mathématiques' : 'Mathematics',
-      date: new Date().toISOString().split('T')[0],
-      type: 'typed_note',
-      tags: ['Formules', 'Examen', 'Analyse'],
-      content: lang === 'fr'
-        ? '• Dérivée d\'un quotient : (u/v)\' = (u\'v - uv\') / v²\n• Fonction exponentielle : (e^u)\' = u\' · e^u  |  ln(a·b) = ln(a) + ln(b)\n• Suites géométriques : u_n = u_0 · q^n  |  Somme = 1er terme · (1 - q^(n+1)) / (1 - q)\n• Croissance comparée : lim (e^x / x^n) = +∞ quand x → +∞.'
-        : '• Derivative of quotient: (u/v)\' = (u\'v - uv\') / v²\n• Exponential: (e^u)\' = u\' · e^u  |  ln(a·b) = ln(a) + ln(b)\n• Geometric sequence: u_n = u_0 · q^n\n• Asymptotics: lim (e^x / x^n) = +∞ as x → +∞.',
-      summary: lang === 'fr'
-        ? 'Recueil des formules incontournables d\'analyse mathématique pour les épreuves écrites et orales.'
-        : 'Essential formulas for calculus and algebra.',
-      isPinned: true,
-      pinColor: 'indigo',
-      pinPriority: 'high',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'curated-pin-bio',
-      title: lang === 'fr' ? '🧬 Métabolisme Cellulaire : Respiration & Bilan ATP' : '🧬 Cellular Metabolism: Respiration & ATP Balance',
-      subject: lang === 'fr' ? 'Biologie' : 'Biology',
-      date: new Date().toISOString().split('T')[0],
-      type: 'typed_note',
-      tags: ['SVT', 'Cycle de Krebs', 'Schéma'],
-      content: lang === 'fr'
-        ? '• Glycolyse (Cytosol) : Glucose → 2 Pyruvates + 2 ATP + 2 NADH,H+\n• Cycle de Krebs (Matrice mitochondriale) : Décarboxylation & coenzymes réduits\n• Chaîne respiratoire (Crêtes) : Gradient de protons et synthèse de ~32 ATP au total.'
-        : '• Glycolysis (Cytosol): Glucose → 2 Pyruvate + 2 ATP + 2 NADH,H+\n• Krebs Cycle (Mitochondrial matrix): Decarboxylation & reduced coenzymes\n• Respiratory chain: Proton gradient & synthesis of ~32 ATP.',
-      summary: lang === 'fr'
-        ? 'Étapes clés de la respiration cellulaire, rendements énergétiques et localisation mitochondriale.'
-        : 'Key stages of cellular respiration and energy balance.',
-      isPinned: true,
-      pinColor: 'emerald',
-      pinPriority: 'medium',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ], [lang]);
+  // Curated fallback pinned notes (empty by default so user starts with clean slate)
+  const defaultCuratedPinnedNotes = React.useMemo<SchoolDocument[]>(() => [], []);
 
-  // Combine user documents pinned + custom quick notes + default curated if empty
+  // Combine user documents pinned + custom quick notes
   const allUserPinned = React.useMemo(() => {
     const fromDocs = documents.filter((d) => pinnedIds.includes(d.id) || d.isPinned);
     const combined = [...customQuickNotes, ...fromDocs];
@@ -307,14 +249,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       }
     });
 
-    if (unique.length === 0) {
-      const hasUnpinnedAll = localStorage.getItem('degreelocker_unpinned_all') === 'true';
-      if (!hasUnpinnedAll) {
-        return defaultCuratedPinnedNotes;
-      }
-    }
     return unique;
-  }, [documents, pinnedIds, customQuickNotes, defaultCuratedPinnedNotes]);
+  }, [documents, pinnedIds, customQuickNotes]);
 
   // Filter pinned notes by subject
   const displayedPinnedNotes = React.useMemo(() => {
@@ -505,10 +441,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   const distinctSubjects = liveStats.subjectsList.map(item => item.subject);
 
-  // Filtered documents based on active pill
+  // Filtered documents based on active pill (excluding blank untitled stubs)
+  const validDocuments = React.useMemo(() => {
+    return documents.filter((d) => {
+      const t = (d.title || '').trim().toLowerCase();
+      if (!t || t === 'document sans titre' || t === 'sans titre' || t === 'untitled') {
+        if (!d.content || d.content.trim() === '') return false;
+      }
+      return true;
+    });
+  }, [documents]);
+
   const filteredDocuments = selectedFilterPill === 'all'
-    ? documents
-    : documents.filter((d) => d.subject?.toLowerCase() === selectedFilterPill.toLowerCase());
+    ? validDocuments
+    : validDocuments.filter((d) => d.subject?.toLowerCase() === selectedFilterPill.toLowerCase());
 
   // Last 7 days for study activity visualizer
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
@@ -608,21 +554,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <span>{lang === 'fr' ? 'Créer une Fiche' : 'Create Card'}</span>
               </button>
 
-              {onOpenSoundHUD && (
-                <button
-                  onClick={() => {
-                    soundFx.playClick(850);
-                    onOpenSoundHUD();
-                  }}
-                  className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/25 via-indigo-600/30 to-amber-500/20 hover:from-amber-500/35 hover:to-indigo-500/40 text-amber-300 border border-amber-400/50 font-black text-xs sm:text-sm inline-flex items-center gap-2.5 transition-all shadow-lg hover:shadow-amber-500/20 active:scale-95 cursor-pointer group"
-                  title={lang === 'fr' ? 'Activer le Studio Audio Focus (Ondes Alpha, Thêta, Pluie & Synthétiseur)' : 'Activate Quantum Focus Audio Studio'}
-                >
-                  <Headphones className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform animate-pulse" />
-                  <span>{lang === 'fr' ? 'Studio Focus 🎧' : 'Focus Studio 🎧'}</span>
-                </button>
-              )}
-
-              {onOpenSyncManager && (
+               {onOpenSyncManager && (
                 <button
                   onClick={onOpenSyncManager}
                   className="px-4 py-3 rounded-2xl bg-slate-900/90 hover:bg-indigo-950/60 text-indigo-300 hover:text-indigo-200 border border-indigo-500/40 font-bold text-xs sm:text-sm inline-flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
@@ -665,8 +597,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               )}
             </div>
 
-            {/* 3 Metrics Row */}
-            <div className="grid grid-cols-3 gap-3 pt-1 text-center">
+            {/* 2 Metrics Row */}
+            <div className="grid grid-cols-2 gap-4 pt-1 text-center">
               
               {/* Metric 1: Documents */}
               <div className="space-y-1.5">
@@ -677,7 +609,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   {lang === 'fr' ? 'Documents' : 'Documents'}
                 </div>
                 <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                  <div className="bg-indigo-500 h-full rounded-full" style={{ width: totalDocsCount > 0 ? '75%' : '0%' }} />
+                  <div className="bg-indigo-500 h-full rounded-full" style={{ width: totalDocsCount > 0 ? '100%' : '0%' }} />
                 </div>
               </div>
 
@@ -690,20 +622,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   {lang === 'fr' ? 'Matières' : 'Subjects'}
                 </div>
                 <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                  <div className="bg-cyan-500 h-full rounded-full" style={{ width: totalSubjectsCount > 0 ? '60%' : '0%' }} />
-                </div>
-              </div>
-
-              {/* Metric 3: Rétention SRS */}
-              <div className="space-y-1.5">
-                <div className="text-2xl font-black text-white font-mono">
-                  {srsRetentionPercent}%
-                </div>
-                <div className="text-[11px] font-medium text-slate-400">
-                  {lang === 'fr' ? 'Rétention SRS' : 'SRS Retention'}
-                </div>
-                <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                  <div className="bg-emerald-400 h-full rounded-full" style={{ width: '88%' }} />
+                  <div className="bg-cyan-500 h-full rounded-full" style={{ width: totalSubjectsCount > 0 ? '100%' : '0%' }} />
                 </div>
               </div>
 
@@ -720,6 +639,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         lang={lang} 
         activeTheme={activeTheme} 
         onNavigateTab={onNavigateTab} 
+        documents={documents}
       />
 
       {/* ========================================================================= */}
@@ -798,18 +718,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <Pin className="w-5 h-5" />
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              {lang === 'fr' ? 'Aucune note épinglée pour ce filtre.' : 'No pinned notes matching this filter.'}
+              {lang === 'fr' ? 'Aucune note épinglée. Créez un mémo pour l\'épingler en tête de tableau.' : 'No pinned notes. Create a memo to pin it at top.'}
             </p>
-            <button
-              onClick={() => {
-                setPinnedIds(defaultCuratedPinnedNotes.map((d) => d.id));
-                localStorage.removeItem('degreelocker_unpinned_all');
-                setPinnedSubjectFilter('all');
-              }}
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
-            >
-              {lang === 'fr' ? 'Restaurer les mémos suggérés' : 'Restore suggested memos'}
-            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -1009,9 +919,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             {filteredDocuments.slice(0, 8).map((doc) => {
               const meta = (doc.subject && SUBJECT_METADATA[doc.subject]) || SUBJECT_METADATA['General'] || DEFAULT_SUBJECT_META;
               const SubjectIcon = meta?.icon || BookOpen;
-              const docCards = flashcards.filter(c => c.docId === doc.id || (c.subject && doc.subject && c.subject.toLowerCase() === doc.subject.toLowerCase()));
-              const masteredCount = docCards.filter(c => c.box === 4).length;
-              const mastery = docCards.length > 0 ? Math.round((masteredCount / docCards.length) * 100) : 60;
 
               return (
                 <div 
@@ -1029,7 +936,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                             {doc.subject || (lang === 'fr' ? 'Général' : 'General')}
                           </span>
                           <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug line-clamp-2" title={doc.title}>
-                            {doc.title}
+                            {doc.title || (lang === 'fr' ? 'Note de Cours' : 'Study Note')}
                           </h4>
                         </div>
                       </div>
@@ -1051,17 +958,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       >
                         <Pin className={`w-3.5 h-3.5 ${pinnedIds.includes(doc.id) || doc.isPinned ? 'fill-amber-400' : ''}`} />
                       </button>
-                    </div>
-
-                    {/* Mastery progress */}
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        <span>{mastery}% {lang === 'fr' ? 'Maîtrisé' : 'Mastered'}</span>
-                        <span className="text-[10px] text-slate-400">{docCards.length} {lang === 'fr' ? 'fiches' : 'cards'}</span>
-                      </div>
-                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full transition-all duration-500" style={{ width: `${mastery}%` }} />
-                      </div>
                     </div>
 
                     {/* Tags & Reading Time */}
@@ -1109,7 +1005,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* ========================================================================= */}
       {/* 3. VISUALIZATION: SUBJECTS BREAKDOWN & 7-DAY STUDY ACTIVITY WIDGET        */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* 3. VISUALIZATION: DOCUMENTS PER SUBJECT BREAKDOWN                         */}
+      {/* ========================================================================= */}
+      <div>
         
         {/* Widget A: Documents per Subject Breakdown Visualizer */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
@@ -1159,59 +1057,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
-        {/* Widget B: 7-Day Recent Study Activity & Streak Widget */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
-                <Flame className="w-4 h-4" />
-              </div>
-              <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
-                {lang === 'fr' ? 'Activité & Assiduité Récente (7 Jours)' : 'Recent Study Activity & Streaks'}
-              </h3>
-            </div>
-            <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-              <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-              <span>{streakData.currentStreak} {lang === 'fr' ? 'Jours d\'affilée' : 'Day Streak'}</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {lang === 'fr'
-              ? 'Consultez vos sessions quotidiennes d\'active recall, consultations de fiches et rédactions de notes.'
-              : 'Track your daily active recall completions, flashcard reviews, and study notebook sessions.'}
-          </p>
-
-          {/* 7 Days Timeline Heatmap Bar */}
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 pt-2 text-center overflow-x-auto pb-2 min-w-[300px]">
-            {last7Days.map((d, idx) => (
-              <div
-                key={idx}
-                className={`p-2.5 rounded-2xl border transition-all flex flex-col items-center justify-between gap-2 ${
-                  d.isStudied
-                    ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200'
-                    : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 text-slate-400'
-                } ${d.isToday ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900' : ''}`}
-              >
-                <span className="text-[10px] font-bold uppercase">{d.dayName}</span>
-                <div
-                  className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs ${
-                    d.isStudied
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  {d.isStudied ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '—'}
-                </div>
-                <span className="text-[9px] font-mono text-slate-400">
-                  {d.isToday ? (lang === 'fr' ? 'Auj.' : 'Today') : d.date.slice(8)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-        </div>
-
       </div>
 
       {/* ========================================================================= */}
@@ -1226,15 +1071,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div 
-            onClick={() => onNavigateTab('flashcards')}
+            onClick={() => onNavigateTab('quiz')}
             className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 hover:shadow-md cursor-pointer transition-all space-y-3"
           >
             <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
               <Layers className="w-5 h-5" />
             </div>
-            <h4 className="font-bold text-sm text-slate-900 dark:text-white">{lang === 'fr' ? 'Fiches Flashcards Personnalisées' : 'Custom Flashcards'}</h4>
+            <h4 className="font-bold text-sm text-slate-900 dark:text-white">{lang === 'fr' ? 'Quiz & Auto-Évaluations' : 'Quiz & Practice Tests'}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {lang === 'fr' ? 'Créez vos fiches à partir de vos notes de chapitre avec répétition espacée Leitner.' : 'Build flashcards from chapter notes with Leitner spaced repetition.'}
+              {lang === 'fr' ? 'Testez vos connaissances sur vos cours avec des QCM et questions de compréhension.' : 'Test your course knowledge with instant practice quizzes.'}
             </p>
           </div>
 

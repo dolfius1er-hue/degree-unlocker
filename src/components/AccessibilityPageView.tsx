@@ -172,7 +172,7 @@ export const AccessibilityPageView: React.FC<AccessibilityPageViewProps> = ({
               ? 'Si vous rencontrez un obstacle d\'accessibilité ou si vous souhaitez suggérer des améliorations pour les technologies d\'assistance, contactez directement notre équipe : '
               : 'If you encounter an accessibility barrier or require assistance, please contact our team at: '}
             <a href="mailto:degreeunlocker.devteam@yahoo.com" className="text-white font-bold underline font-mono ml-1">degreeunlocker.devteam@yahoo.com</a>.
-            {isFr ? ' Nous nous engageons à répondre sous 48 heures.' : ' We strive to respond within 48 hours.'}
+            {isFr ? ' Nous accordons la priorité absolue aux aménagements pour les élèves.' : ' We prioritize student accessibility accommodations.'}
           </p>
         </section>
 

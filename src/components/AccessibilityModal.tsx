@@ -110,12 +110,12 @@ export const AccessibilityModal: React.FC<AccessibilityModalProps> = ({
           <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 space-y-2 text-xs text-indigo-200">
             <p className="font-bold text-white flex items-center gap-2">
               <Mail className="w-4 h-4 text-indigo-400" />
-              <span>{isFr ? 'Besoin d\'un aménagement spécifique ADA ?' : 'Need custom ADA assistance?'}</span>
+              <span>{isFr ? 'Besoin d\'un aménagement spécifique RGAA / WCAG ?' : 'Need custom accessibility assistance?'}</span>
             </p>
             <p>
               {isFr
-                ? 'Contactez notre référent accessibilité à degreeunlocker.devteam@yahoo.com (DPO : dolfius1er@gmail.com) pour tout aménagement sous 48h.'
-                : 'Contact our accessibility officer at degreeunlocker.devteam@yahoo.com (DPO: dolfius1er@gmail.com) for any required adaptation within 48h.'}
+                ? 'Contactez notre référent accessibilité à degreeunlocker.devteam@yahoo.com (DPO : dolfius1er@gmail.com) pour tout aménagement.'
+                : 'Contact our accessibility officer at degreeunlocker.devteam@yahoo.com (DPO: dolfius1er@gmail.com) for any required adaptation.'}
             </p>
           </div>
         </div>

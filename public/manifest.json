@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Degree Unlocker Lite",
   "short_name": "DegreeUnlocker Lite",
-  "description": "Lightweight, ultra-fast academic study platform with multi-format document intelligence, AI summaries, semantic search, and blocknote companion.",
+  "description": "Station de révision académique rapide pour collège, lycée et supérieur : fiches de synthèse, flashcards SRS, manuels scolaires et suivi 100% local.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -11,9 +11,9 @@
   "categories": ["education", "productivity"],
   "shortcuts": [
     {
-      "name": "Dashboard Overview",
-      "short_name": "Dashboard",
-      "description": "Open main study dashboard",
+      "name": "Tableau de Bord",
+      "short_name": "Révisions",
+      "description": "Ouvrir le tableau de bord des révisions",
       "url": "/"
     }
   ],

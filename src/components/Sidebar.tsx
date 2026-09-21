@@ -712,20 +712,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               </button>
             )}
 
-            {/* Playlists & Soundscapes - Web only */}
-            {!isTauri() && (
-              <button
-                onClick={wrapAction(onOpenPlaylists)}
-                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-                title={lang === 'fr' ? 'Playlists & Bruit Blanc' : 'Playlists & Soundscapes'}
-              >
-                <div className="flex items-center gap-2.5 truncate">
-                  <Headphones className="w-4 h-4 text-pink-400 shrink-0" />
-                  {!collapsed && <span className="truncate">{lang === 'fr' ? 'Bruit Blanc & Audio' : 'Audio Soundscapes'}</span>}
-                </div>
-              </button>
-            )}
-
             {/* Photo Scanner (Handwritten Notes) */}
             {onOpenPhotoScanner && (
               <button
@@ -918,12 +904,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
               </button>
             </div>
 
-            {/* Streak & Status */}
-            <div className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-400">
-              <div className="flex items-center gap-1.5 text-amber-400 font-semibold">
-                <Flame className="w-3.5 h-3.5 fill-current" />
-                <span>{streakDays} {lang === 'fr' ? 'Jours d\'Étude' : 'Day Streak'}</span>
-              </div>
+            {/* Status Footer */}
+            <div className="flex items-center justify-center px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-400">
               <span className="font-mono text-[9px] text-emerald-400">100% Local PC</span>
             </div>
           </div>
