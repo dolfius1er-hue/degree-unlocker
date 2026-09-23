@@ -86,7 +86,10 @@ import {
   subscribeToDeviceTransfers, 
   sendSingleDocumentToCloud, 
   deleteDocumentFromCloud,
-  DeviceTransferRecord 
+  DeviceTransferRecord,
+  getSavedAuthSession,
+  saveAuthSessionLocally,
+  auth
 } from './lib/firebase';
 
 export default function App() {
@@ -252,7 +255,7 @@ export default function App() {
   const [isAgeGateOpen, setIsAgeGateOpen] = useState<boolean>(() => !isAgeGateVerified());
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
   const [presentationDoc, setPresentationDoc] = useState<SchoolDocument | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => getSavedAuthSession() || auth.currentUser || null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(false);
   const [isQuoteLoadingOpen, setIsQuoteLoadingOpen] = useState(false);
   const [quoteLoadingTitle, setQuoteLoadingTitle] = useState<string | undefined>(undefined);
@@ -568,36 +571,21 @@ export default function App() {
     };
   }, [loadingStage]);
 
-  // STAGE 4: Non-critical Auth Observer Setup (Idle / Latency Isolation)
-  // Runs STRICTLY after the splash screen is fully dismissed to prevent main thread blocking
+  // Real-time Auth Observer & Session Persistence Synchronization
   useEffect(() => {
-    if (loadingStage < 4 || !isSplashDismissed) return;
-
     let isMounted = true;
-    let unsubAuth: (() => void) | null = null;
-
-    const idleCallback = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 250));
-
-    const handle = idleCallback(() => {
-      if (!isMounted) return;
-      console.log('[Stage 4] Registering deferred Firebase Auth state observer in idle callback...');
-      unsubAuth = onAuthChange((user) => {
-        if (isMounted) {
-          setCurrentUser(user);
-        }
-      });
-    }, { timeout: 2500 });
+    const unsubAuth = onAuthChange((user) => {
+      if (isMounted) {
+        setCurrentUser(user);
+        saveAuthSessionLocally(user);
+      }
+    });
 
     return () => {
       isMounted = false;
-      if ((window as any).cancelIdleCallback) {
-        (window as any).cancelIdleCallback(handle);
-      } else {
-        clearTimeout(handle);
-      }
-      if (unsubAuth) unsubAuth();
+      unsubAuth();
     };
-  }, [loadingStage, isSplashDismissed]);
+  }, []);
 
   // PWA & Installation Prompt Event Listeners
   useEffect(() => {

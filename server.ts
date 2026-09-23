@@ -21,7 +21,6 @@ const PORT = 3000;
 // -------------------------------------------------------------
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
@@ -52,6 +51,7 @@ function createRateLimiter(options: { windowMs: number; max: number; message: st
   return (req: Request, res: Response, next: () => void) => {
     // Only rate-limit API calls
     if (!req.path.startsWith('/api/')) return next();
+    if (req.path === '/api/health') return next();
 
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
     const key = `${options.keyPrefix}:${clientIp}`;
@@ -78,35 +78,35 @@ function createRateLimiter(options: { windowMs: number; max: number; message: st
   };
 }
 
-// Global API limiter (120 req / minute per IP)
+// Global API limiter (600 req / minute per IP)
 const generalLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 120,
+  max: 600,
   message: 'Trop de requêtes vers le serveur. Veuillez patienter un instant.',
   keyPrefix: 'gen',
 });
 
-// Heavy AI endpoints limiter (25 req / minute per IP)
+// Heavy AI endpoints limiter (60 req / minute per IP)
 const aiGenerationLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 25,
-  message: 'Limite de requêtes IA atteinte (max 25 par minute). Veuillez patienter quelques secondes.',
+  max: 60,
+  message: 'Limite de requêtes IA atteinte (max 60 par minute). Veuillez patienter quelques secondes.',
   keyPrefix: 'ai',
 });
 
-// File upload limiter (20 uploads / minute per IP)
+// File upload limiter (60 uploads / minute per IP)
 const uploadLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 20,
-  message: 'Limite de téléversement atteinte (max 20 par minute).',
+  max: 60,
+  message: 'Limite de téléversement atteinte (max 60 par minute).',
   keyPrefix: 'up',
 });
 
 app.use('/api/', generalLimiter);
 
-// Protect payload sizes from Denial of Service (30MB max)
-app.use(express.json({ limit: '30mb' }));
-app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+// Protect payload sizes from Denial of Service (50MB max)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Ensure data directory and local uploads storage folder exist
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -217,10 +217,9 @@ function getGemini(userApiKey?: string): GoogleGenAI {
 // Resilient Gemini model fallback chain to handle 503 high demand or quota limits
 const CANDIDATE_MODELS = [
   'gemini-3.8-flash',
-  'gemini-3.5-flash',
   'gemini-3.1-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
+  'gemini-flash-latest',
+  'gemini-3.1-pro-preview',
 ];
 
 interface RetryOptions {
@@ -232,11 +231,11 @@ interface RetryOptions {
 }
 
 const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
-  maxRetriesPerModel: 3,
-  initialDelayMs: 400,
-  maxDelayMs: 3500,
-  backoffFactor: 2,
-  jitterMs: 250,
+  maxRetriesPerModel: 2,
+  initialDelayMs: 300,
+  maxDelayMs: 1500,
+  backoffFactor: 1.5,
+  jitterMs: 150,
 };
 
 function isTransientGeminiError(err: any): boolean {
@@ -269,6 +268,7 @@ function calculateBackoffDelay(attempt: number, options: Required<RetryOptions>)
   return Math.min(options.maxDelayMs, base + jitter);
 }
 
+// Resilient Gemini model caller with exponential backoff and multi-model fallback
 async function callGeminiWithFallback(requestConfig: {
   contents: any;
   config?: any;
@@ -307,12 +307,12 @@ async function callGeminiWithFallback(requestConfig: {
         if (isTransient && attempt < opts.maxRetriesPerModel - 1) {
           const delay = calculateBackoffDelay(attempt, opts);
           console.warn(
-            `[Gemini Retry] Model ${model} returned transient error (${errMsg.slice(0, 120)}). Retrying attempt ${attempt + 2}/${opts.maxRetriesPerModel} in ${delay}ms with exponential backoff...`
+            `[Gemini Retry] Model ${model} returned transient error (${errMsg.slice(0, 120)}). Retrying attempt ${attempt + 2}/${opts.maxRetriesPerModel} in ${delay}ms...`
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else if (isTransient) {
           console.warn(
-            `[Gemini Retry] Model ${model} exhausted ${opts.maxRetriesPerModel} attempts. Switching to next candidate model in fallback chain...`
+            `[Gemini Retry] Model ${model} exhausted ${opts.maxRetriesPerModel} attempts. Switching to next candidate model...`
           );
           await new Promise((resolve) => setTimeout(resolve, 200));
           break; // proceed to next candidate model
@@ -324,7 +324,7 @@ async function callGeminiWithFallback(requestConfig: {
     }
   }
 
-  throw lastError || new Error('All Gemini candidate models are currently experiencing high demand. Local fallback activated.');
+  throw lastError || new Error('Tous les modèles candidats sont temporairement indisponibles. Veuillez réessayer dans quelques instants.');
 }
 
 function handleAiError(res: Response, err: any) {
@@ -566,9 +566,40 @@ function loadDocuments(): any[] {
   return [];
 }
 
+function sanitizeDocsForStorage(docs: any[]): any[] {
+  if (!Array.isArray(docs)) return [];
+  return docs.map(doc => {
+    if (!doc || typeof doc !== 'object') return doc;
+    if (doc.pdfDataUrl && doc.pdfDataUrl.length > 50000) {
+      if (!doc.storedFileName && !doc.downloadUrl) {
+        try {
+          const b64 = String(doc.pdfDataUrl).replace(/^data:[^;]+;base64,/, '').trim();
+          const buf = Buffer.from(b64, 'base64');
+          const safeName = `${Date.now()}-${(doc.fileName || 'document.pdf').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const localPath = path.join(UPLOADS_DIR, safeName);
+          fs.writeFileSync(localPath, buf);
+          const { pdfDataUrl, ...rest } = doc;
+          return {
+            ...rest,
+            storedFileName: safeName,
+            localFilePath: localPath,
+            downloadUrl: `/api/storage/files/${safeName}`,
+          };
+        } catch {
+          // ignore
+        }
+      }
+      const { pdfDataUrl, ...rest } = doc;
+      return rest;
+    }
+    return doc;
+  });
+}
+
 function saveDocuments(docs: any[]) {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(docs, null, 2), 'utf-8');
+    const cleanDocs = sanitizeDocsForStorage(docs);
+    fs.writeFileSync(DB_FILE, JSON.stringify(cleanDocs, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error saving database file:', err);
   }
@@ -796,68 +827,6 @@ app.post('/api/database/clear', (req: Request, res: Response) => {
     saveQuizHistory([]);
     saveStreaks({ activityDates: [], currentStreak: 0 });
     res.json({ success: true, message: 'All study data and documents cleared.' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -------------------------------------------------------------
-// STREAKS API
-// -------------------------------------------------------------
-app.get('/api/streaks', (req: Request, res: Response) => {
-  try {
-    const streaks = loadStreaks();
-    res.json({ success: true, ...streaks });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/streaks', (req: Request, res: Response) => {
-  try {
-    const { activityDates, date } = req.body;
-    let current = loadStreaks();
-    let dates = current.activityDates || [];
-    
-    if (Array.isArray(activityDates)) {
-      dates = Array.from(new Set([...dates, ...activityDates]));
-    } else if (date) {
-      if (!dates.includes(date)) dates.push(date);
-    } else {
-      const today = new Date().toISOString().split('T')[0];
-      if (!dates.includes(today)) dates.push(today);
-    }
-    
-    // Compute current consecutive streak
-    const sorted = [...dates].sort();
-    let streak = 0;
-    let checkDate = new Date();
-    const todayStr = checkDate.toISOString().split('T')[0];
-    const hasToday = sorted.includes(todayStr);
-
-    if (!hasToday) {
-      checkDate.setDate(checkDate.getDate() - 1);
-      const yesterdayStr = checkDate.toISOString().split('T')[0];
-      if (!sorted.includes(yesterdayStr)) {
-        streak = 0;
-      }
-    }
-
-    if (hasToday || sorted.includes(checkDate.toISOString().split('T')[0])) {
-      while (true) {
-        const dStr = checkDate.toISOString().split('T')[0];
-        if (sorted.includes(dStr)) {
-          streak++;
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-    }
-
-    const updated = { activityDates: dates, currentStreak: streak };
-    saveStreaks(updated);
-    res.json({ success: true, ...updated });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2080,20 +2049,36 @@ app.post('/api/parse-pdf', async (req: Request, res: Response) => {
     const localFilePath = path.join(UPLOADS_DIR, safeFileName);
     fs.writeFileSync(localFilePath, pdfBuffer);
 
+    // 4. Local High-Fidelity Text Extraction using pdf-parse
+    let localPdfText = '';
+    try {
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: pdfBuffer });
+      const parseResult = await parser.getText();
+      localPdfText = (parseResult?.text || '').trim();
+      if (typeof parser.destroy === 'function') {
+        try { await parser.destroy(); } catch {}
+      }
+    } catch (pdfErr) {
+      console.warn('Local PDF extraction note:', pdfErr);
+    }
+
     let parsed: any = null;
 
     try {
-      const pdfPart = {
-        inlineData: {
-          mimeType: 'application/pdf',
-          data: cleanBase64,
-        },
-      };
+      let promptParts: any[] = [];
+      const hasLocalText = localPdfText.length > 50;
 
-      const textPart = {
-        text: `You are an elite academic pedagogue and curriculum inspector (French & International Curriculum: Baccalauréat, CPGE, Licence, Secondary & Higher Education).
-Analyze this uploaded school/course PDF document.
+      if (hasLocalText) {
+        const truncatedText = localPdfText.length > 50000 ? localPdfText.slice(0, 50000) + '\n\n[...suite du document tronquée pour analyse...]' : localPdfText;
+        promptParts = [
+          {
+            text: `You are an elite academic pedagogue and curriculum inspector (French & International Curriculum: Baccalauréat, CPGE, Licence, Secondary & Higher Education).
+Analyze this uploaded school/course document text extracted from PDF:
 File name: ${fileName || 'document.pdf'}
+
+EXTRACTED DOCUMENT TEXT:
+${truncatedText}
 
 MANDATORY PEDAGOGICAL INSTRUCTIONS:
 1. 'title': Formulate a precise, academic, curriculum-aligned title (e.g., 'Mathématiques - Les Suites Numériques et Récurrence' or 'Physique - Cinématique et Lois de Newton').
@@ -2119,11 +2104,45 @@ MANDATORY PEDAGOGICAL INSTRUCTIONS:
    - 'summary': 2-3 sentence wrap-up for the bottom margin
 14. 'tags': 4-6 academic and thematic tags.
 
-Return as JSON matching the requested schema.`,
-      };
+Return as JSON matching the requested schema.`
+          }
+        ];
+      } else {
+        promptParts = [
+          {
+            inlineData: {
+              mimeType: 'application/pdf',
+              data: cleanBase64,
+            },
+          },
+          {
+            text: `You are an elite academic pedagogue and curriculum inspector (French & International Curriculum: Baccalauréat, CPGE, Licence, Secondary & Higher Education).
+Analyze this uploaded school/course PDF document.
+File name: ${fileName || 'document.pdf'}
+
+MANDATORY PEDAGOGICAL INSTRUCTIONS:
+1. 'title': Formulate a precise, academic, curriculum-aligned title (e.g., 'Mathématiques - Les Suites Numériques et Récurrence' or 'Physique - Cinématique et Lois de Newton').
+2. 'subject': Determine the EXACT academic discipline (e.g. Mathématiques, Physique-Chimie, SVT / Biologie, Histoire-Géographie, Philosophie, Français & Littérature, Informatique / NSI, SES / Économie, Droit, Anglais, Espagnol, Allemand, Humanités / Latin). NEVER return 'Général' or 'General' unless content is completely indeterminate.
+3. 'curriculumDomain': Specific official syllabus chapter/theme.
+4. 'gradeLevel': Educational stage (e.g. 'Terminale', 'Première', 'Seconde', 'Supérieur / CPGE', 'Université L1-L3').
+5. 'difficultyLevel': 'Débutant', 'Intermédiaire', 'Avancé / Bac', or 'Excellence / Concours'.
+6. 'content': Comprehensive, beautifully structured Markdown transcription with LaTeX equations.
+7. 'summary': Deep, executive academic synthesis (3-5 sentences).
+8. 'keyPoints': 5-8 atomic, memorizable takeaways.
+9. 'definitions': 3-8 key terms with razor-sharp definitions.
+10. 'formulas': 2-6 core formulas/theorems with LaTeX.
+11. 'examTips': 3-5 practical exam tips.
+12. 'suggestedQuestions': 3-6 active recall test questions with answers.
+13. 'cornellNotes': Cornell layout components.
+14. 'tags': 4-6 academic tags.
+
+Return as JSON matching the requested schema.`
+          }
+        ];
+      }
 
       const { text } = await callGeminiWithFallback({
-        contents: { parts: [pdfPart, textPart] },
+        contents: { parts: promptParts },
         config: {
           responseMimeType: 'application/json',
           responseSchema: SMART_ACADEMIC_DOC_SCHEMA,
@@ -2144,14 +2163,18 @@ Return as JSON matching the requested schema.`,
     const formattedTitle = cleanTitle ? cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1) : 'Document PDF';
 
     if (!parsed || !parsed.title) {
-      const autoSubject = detectSubjectFromText(formattedTitle, '');
+      const autoSubject = detectSubjectFromText(formattedTitle, localPdfText || '');
+      const contentToUse = localPdfText
+        ? `# ${formattedTitle}\n\n${localPdfText}`
+        : `# ${formattedTitle}\n\nDocument PDF importé avec succès (${(pdfBuffer.length / 1024).toFixed(1)} Ko).\n\nCe document est stocké localement sur votre machine (PC) dans votre base Degree Unlocker. Vous pouvez l'utiliser pour générer des résumés, des flashcards, des quiz d'entraînement ou des guides de bloc-notes manuscrits.`;
+
       parsed = {
         title: formattedTitle,
         subject: autoSubject,
         curriculumDomain: 'Programme Officiel',
         gradeLevel: 'Lycée / Université',
         difficultyLevel: 'Intermédiaire',
-        content: `# ${formattedTitle}\n\nDocument PDF importé avec succès (${(pdfBuffer.length / 1024).toFixed(1)} Ko).\n\nCe document est stocké localement sur votre machine (PC) dans votre base Degree Unlocker. Vous pouvez l'utiliser pour générer des résumés, des flashcards, des quiz d'entraînement ou des guides de bloc-notes manuscrits.`,
+        content: contentToUse,
         summary: `Document de ${autoSubject} numérisé et archivé dans votre base locale. Prêt pour la révision, l'extraction de fiches et la reproduction manuscrite.`,
         keyPoints: [
           `Matière identifiée : ${autoSubject}`,
@@ -2319,6 +2342,26 @@ app.post('/api/parse-document', async (req: Request, res: Response) => {
         else if (lowerName.endsWith('.gif')) imageMimeType = 'image/gif';
         else imageMimeType = 'image/jpeg';
       }
+      // PDF documents (.pdf)
+      else if (lowerName.endsWith('.pdf') || fileType === 'pdf') {
+        effectiveDocType = 'pdf';
+        try {
+          const { PDFParse } = await import('pdf-parse');
+          const parser = new PDFParse({ data: fileBuffer });
+          const parseResult = await parser.getText();
+          extractedText = (parseResult?.text || '').trim();
+          if (typeof parser.destroy === 'function') {
+            try { await parser.destroy(); } catch {}
+          }
+        } catch (pdfErr: any) {
+          console.warn('PDF parsing error in parse-document:', pdfErr);
+        }
+        if (!extractedText) {
+          isMultimodalImage = true;
+          cleanImageBase64 = cleanBase64;
+          imageMimeType = 'application/pdf';
+        }
+      }
       // 3. PowerPoint Presentations (.pptx, .ppt)
       else if (lowerName.endsWith('.pptx') || lowerName.endsWith('.ppt') || fileType === 'powerpoint') {
         effectiveDocType = 'presentation_slides';
@@ -2463,7 +2506,10 @@ Return as JSON matching the schema.`,
         };
       } else {
         // High precision Gemini Text Analysis
-        contentsPayload = `You are an elite academic pedagogue and curriculum inspector (French & International Curriculum: Baccalauréat, CPGE, Licence, Lycée, Brevet).
+        contentsPayload = {
+          parts: [
+            {
+              text: `You are an elite academic pedagogue and curriculum inspector (French & International Curriculum: Baccalauréat, CPGE, Licence, Lycée, Brevet).
 Analyze this imported academic document (${fileName}):
 Language preference: ${language === 'auto' ? 'Match the source language (French if in French, English if in English)' : language}
 
@@ -2494,7 +2540,10 @@ MANDATORY PEDAGOGICAL INSTRUCTIONS:
    - 'summary': 2-3 sentence wrap-up for the bottom margin
 14. 'tags': 4-6 academic and thematic tags.
 
-Return as JSON matching the schema.`;
+Return as JSON matching the schema.`,
+            },
+          ],
+        };
       }
 
       const { text } = await callGeminiWithFallback({
@@ -3070,7 +3119,7 @@ app.get('/api/storage/files', (req: Request, res: Response) => {
   }
 });
 
-// Serve / download a local stored file
+// Serve / download a local stored file with comprehensive MIME types and inline/attachment support
 app.get('/api/storage/files/:filename', (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
@@ -3082,15 +3131,40 @@ app.get('/api/storage/files/:filename', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'File not found on local disk' });
     }
 
-    if (safeName.endsWith('.pdf')) {
-      res.setHeader('Content-Type', 'application/pdf');
-    } else if (safeName.endsWith('.txt') || safeName.endsWith('.md')) {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    } else {
-      res.setHeader('Content-Type', 'application/octet-stream');
-    }
+    const ext = path.extname(safeName).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc': 'application/msword',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.xls': 'application/vnd.ms-excel',
+      '.csv': 'text/csv; charset=utf-8',
+      '.tsv': 'text/tab-separated-values; charset=utf-8',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+      '.txt': 'text/plain; charset=utf-8',
+      '.md': 'text/markdown; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
+      '.tex': 'text/plain; charset=utf-8',
+      '.odt': 'application/vnd.oasis.opendocument.text',
+      '.ods': 'application/vnd.oasis.opendocument.spreadsheet',
+      '.odp': 'application/vnd.oasis.opendocument.presentation',
+    };
 
-    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+    const mimeType = mimeMap[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', mimeType);
+
+    const isDownload = req.query.download === '1' || req.query.download === 'true';
+    const dispositionType = isDownload ? 'attachment' : 'inline';
+    res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(safeName)}"`);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     res.sendFile(filePath);
   } catch (err: any) {
     console.error('Serve file error:', err);
@@ -3474,6 +3548,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       success: true,
       docId: documentId,
       docTitle,
+      title: docTitle,
       subject: docSubject,
       count: questions.length,
       questions,
@@ -3727,8 +3802,10 @@ Return ONLY a valid JSON object matching the requested schema.`;
 // -------------------------------------------------------------
 app.post('/api/coach/ask', async (req: Request, res: Response) => {
   try {
-    const { message, history = [], currentSubject, currentDocTitle, language = 'fr' } = req.body;
-    if (!message || message.trim().length === 0) {
+    const { history = [], currentSubject, currentDocTitle, language = 'fr' } = req.body;
+    const rawMsg = req.body.message || req.body.question || req.body.prompt || '';
+    const message = typeof rawMsg === 'string' ? rawMsg.trim() : '';
+    if (!message) {
       return res.status(400).json({ error: 'Message cannot be empty.' });
     }
 

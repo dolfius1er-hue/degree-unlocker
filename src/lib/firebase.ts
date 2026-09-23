@@ -8,6 +8,9 @@ import {
   createUserWithEmailAndPassword,
   signOut as fbSignOut, 
   onAuthStateChanged, 
+  setPersistence,
+  browserLocalPersistence,
+  inMemoryPersistence,
   User 
 } from 'firebase/auth';
 import { 
@@ -39,6 +42,13 @@ try {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
+
+// Enforce durable browser local persistence so login sessions are remembered across reloads
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.info('[Firebase Auth] Durable local persistence setup note:', err?.message || err);
+  });
+}
 const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId || 'ai-studio-degreeunlocker-aea10e58-ccdf-4e46-808c-8bb2be0078dd';
 
 // Initialize resilient Firestore with auto-detect long-polling to prevent 10s timeout warnings in proxy/container environments
@@ -177,6 +187,7 @@ export async function loginWithGoogle(withWorkspaceScopes = false): Promise<{ us
       } catch (e) {
         handleFirestoreError(e, OperationType.WRITE, `users/${result.user.uid}`);
       }
+      saveAuthSessionLocally(result.user, result.user.email);
     }
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (err: any) {
@@ -198,40 +209,158 @@ export async function loginWithGoogle(withWorkspaceScopes = false): Promise<{ us
 }
 
 /**
+ * Format Firebase Auth errors into clear, friendly student messages
+ */
+export function formatAuthErrorMessage(err: any, isFr: boolean = true): string {
+  const code = err?.code || '';
+  const message = err?.message || String(err || '');
+
+  if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+    return isFr
+      ? 'Identifiant ou mot de passe incorrect. Si vous n\'avez pas encore de compte, activez "Créer un compte".'
+      : 'Invalid email or password. If you don\'t have an account yet, switch to "Create account".';
+  }
+  if (code === 'auth/email-already-in-use') {
+    return isFr
+      ? 'Cette adresse email est déjà utilisée. Cliquez sur "Déjà un compte ? Se connecter".'
+      : 'This email is already in use. Please sign in instead.';
+  }
+  if (code === 'auth/weak-password') {
+    return isFr
+      ? 'Mot de passe trop court. Veuillez saisir au moins 6 caractères.'
+      : 'Password is too short. Please enter at least 6 characters.';
+  }
+  if (code === 'auth/invalid-email') {
+    return isFr
+      ? 'Adresse email invalide. Veuillez vérifier le format (ex: etudiant@gmail.com).'
+      : 'Invalid email address format.';
+  }
+  if (code === 'auth/too-many-requests') {
+    return isFr
+      ? 'Trop de tentatives infructueuses. Veuillez patienter un instant avant de réessayer.'
+      : 'Too many failed attempts. Please wait a moment and try again.';
+  }
+  if (code === 'auth/network-request-failed' || message.includes('network')) {
+    return isFr
+      ? 'Erreur réseau. Vérifiez votre connexion internet.'
+      : 'Network connection failed. Please check your internet connection.';
+  }
+  if (code === 'auth/popup-closed-by-user') {
+    return isFr
+      ? 'Connexion annulée (la fenêtre a été fermée).'
+      : 'Sign-in cancelled (popup was closed).';
+  }
+
+  return message || (isFr ? 'Erreur d\'authentification' : 'Authentication error');
+}
+
+/**
+ * Cache user session locally so login is immediately remembered across refreshes and offline starts
+ */
+export function saveAuthSessionLocally(user: User | null, rememberEmail?: string | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (user) {
+      const sessionData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || user.email?.split('@')[0] || 'Étudiant',
+        photoURL: user.photoURL || null,
+        isAnonymous: user.isAnonymous,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem('degreeunlocker_auth_user', JSON.stringify(sessionData));
+      if (rememberEmail) {
+        localStorage.setItem('degreeunlocker_saved_email', rememberEmail.trim());
+        localStorage.setItem('degreeunlocker_remember_me', 'true');
+      }
+    } else {
+      localStorage.removeItem('degreeunlocker_auth_user');
+      const rememberMe = localStorage.getItem('degreeunlocker_remember_me') === 'true';
+      if (!rememberMe) {
+        localStorage.removeItem('degreeunlocker_saved_email');
+      }
+    }
+  } catch (e) {
+    console.warn('[Session Cache] LocalStorage error:', e);
+  }
+}
+
+export function getSavedAuthSession(): any | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = localStorage.getItem('degreeunlocker_auth_user');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return null;
+}
+
+export function getSavedEmail(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return localStorage.getItem('degreeunlocker_saved_email') || '';
+  } catch (e) {}
+  return '';
+}
+
+/**
  * Sign in anonymously for private device sync
  */
 export async function loginAnonymously(): Promise<User> {
   const res = await signInAnonymously(auth);
+  saveAuthSessionLocally(res.user);
   return res.user;
 }
 
 /**
- * Sign in with Email and Password
+ * Sign in with Email and Password with durable persistence & error translation
  */
-export async function loginWithEmail(email: string, pass: string): Promise<User> {
-  const res = await signInWithEmailAndPassword(auth, email, pass);
-  return res.user;
-}
-
-/**
- * Register with Email and Password
- */
-export async function registerWithEmail(email: string, pass: string): Promise<User> {
-  const res = await createUserWithEmailAndPassword(auth, email, pass);
-  if (res.user) {
-    const userRef = doc(db, 'users', res.user.uid);
-    try {
-      await setDoc(userRef, {
-        uid: res.user.uid,
-        email: res.user.email,
-        displayName: email.split('@')[0] || 'Étudiant',
-        lastLoginAt: serverTimestamp(),
-      }, { merge: true });
-    } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, `users/${res.user.uid}`);
+export async function loginWithEmail(email: string, pass: string, rememberMe = true): Promise<User> {
+  try {
+    if (typeof window !== 'undefined') {
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : inMemoryPersistence).catch(() => {});
     }
+    const res = await signInWithEmailAndPassword(auth, email.trim(), pass);
+    saveAuthSessionLocally(res.user, rememberMe ? email : null);
+    return res.user;
+  } catch (err: any) {
+    const friendlyMessage = formatAuthErrorMessage(err, true);
+    const customError = new Error(friendlyMessage);
+    (customError as any).code = err?.code;
+    throw customError;
   }
-  return res.user;
+}
+
+/**
+ * Register with Email and Password with durable persistence & error translation
+ */
+export async function registerWithEmail(email: string, pass: string, rememberMe = true): Promise<User> {
+  try {
+    if (typeof window !== 'undefined') {
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : inMemoryPersistence).catch(() => {});
+    }
+    const res = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+    if (res.user) {
+      saveAuthSessionLocally(res.user, rememberMe ? email : null);
+      const userRef = doc(db, 'users', res.user.uid);
+      try {
+        await setDoc(userRef, {
+          uid: res.user.uid,
+          email: res.user.email,
+          displayName: email.split('@')[0] || 'Étudiant',
+          lastLoginAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `users/${res.user.uid}`);
+      }
+    }
+    return res.user;
+  } catch (err: any) {
+    const friendlyMessage = formatAuthErrorMessage(err, true);
+    const customError = new Error(friendlyMessage);
+    (customError as any).code = err?.code;
+    throw customError;
+  }
 }
 
 export const signInWithGoogle = loginWithGoogle;
@@ -244,23 +373,27 @@ export const isFirebaseOnline = true;
 export async function loginWithDemoAccount(email = 'dolfius1er@gmail.com', displayName = 'Étudiant Certifié'): Promise<User> {
   try {
     const res = await signInAnonymously(auth);
+    saveAuthSessionLocally(res.user);
     return res.user;
   } catch (err) {
-    return {
+    const fallbackUser = {
       uid: 'demo-user-123',
       email,
       displayName,
       isAnonymous: true,
       emailVerified: true,
     } as unknown as User;
+    saveAuthSessionLocally(fallbackUser);
+    return fallbackUser;
   }
 }
 
 /**
- * Sign out
+ * Sign out and clear local cached session
  */
 export async function logoutUser(): Promise<void> {
   cachedAccessToken = null;
+  saveAuthSessionLocally(null);
   await fbSignOut(auth);
 }
 
@@ -522,19 +655,21 @@ export function subscribeToDeviceTransfers(
  */
 export async function createPairingCode(userId: string): Promise<string> {
   const randomNum = Math.floor(1000 + Math.random() * 9000);
-  const code = `DG-${randomNum}`;
+  const code = `DG${randomNum}`;
   const path = `pairings/${code}`;
+  const now = new Date().toISOString();
   try {
     const pairRef = doc(db, 'pairings', code);
     await setDoc(pairRef, {
       userId,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours
     });
     return code;
   } catch (e) {
     handleFirestoreError(e, OperationType.WRITE, path);
-    return `DG-${randomNum}`;
+    return `DG${randomNum}`;
   }
 }
 
@@ -542,7 +677,7 @@ export async function createPairingCode(userId: string): Promise<string> {
  * Resolve a pairing code on Smartphone to get the PC's linked user session
  */
 export async function resolvePairingCode(code: string): Promise<string | null> {
-  const cleanCode = code.trim().toUpperCase();
+  const cleanCode = code.replace(/[^A-Z0-9]/gi, '').toUpperCase();
   const path = `pairings/${cleanCode}`;
   try {
     const pairRef = doc(db, 'pairings', cleanCode);

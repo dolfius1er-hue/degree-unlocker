@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLanguage } from '../types';
 import { 
   loginWithGoogle, 
@@ -10,6 +10,8 @@ import {
   fetchDocumentsFromFirestore,
   createPairingCode,
   resolvePairingCode,
+  getSavedEmail,
+  formatAuthErrorMessage,
   auth
 } from '../lib/firebase';
 import { 
@@ -32,7 +34,13 @@ import {
   Copy,
   Check,
   Share2,
-  Download
+  Download,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Lock,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface AuthSyncModalProps {
@@ -64,13 +72,26 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
   // Email auth states
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => getSavedEmail());
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [authSuggestion, setAuthSuggestion] = useState<{ type: 'switch_to_register' | 'switch_to_login'; text: string } | null>(null);
 
   // Pairing code states
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [codeCopied, setCodeCopied] = useState(false);
+
+  const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+  // Pre-load saved email if changed
+  useEffect(() => {
+    if (!email) {
+      const saved = getSavedEmail();
+      if (saved) setEmail(saved);
+    }
+  }, []);
 
   if (!isOpen) return null;
 
@@ -78,6 +99,7 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
   const handleGoogleLogin = async () => {
     setIsProcessing(true);
     setSyncMessage(null);
+    setAuthSuggestion(null);
     try {
       const loginResult = await loginWithGoogle();
       const user = loginResult.user;
@@ -104,20 +126,29 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
     }
   };
 
-  // Handle Email Sign-In / Sign-Up
+  // Handle Email Sign-In / Sign-Up with Durable Persistence
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
     setIsProcessing(true);
     setSyncMessage(null);
+    setAuthSuggestion(null);
     try {
       let user: any;
       if (isSignUp) {
-        user = await registerWithEmail(email.trim(), password);
-        setSyncMessage(lang === 'fr' ? 'Compte créé avec succès ! Vos données sont synchronisées.' : 'Account created successfully!');
+        user = await registerWithEmail(email.trim(), password, rememberMe);
+        setSyncMessage(
+          lang === 'fr' 
+            ? 'Compte créé avec succès ! Vos données et identifiants sont enregistrés.' 
+            : 'Account created successfully! Credentials saved.'
+        );
       } else {
-        user = await loginWithEmail(email.trim(), password);
-        setSyncMessage(lang === 'fr' ? 'Connexion réussie ! Vos cours se synchronisent.' : 'Signed in successfully!');
+        user = await loginWithEmail(email.trim(), password, rememberMe);
+        setSyncMessage(
+          lang === 'fr' 
+            ? 'Connexion réussie ! Vos cours se synchronisent et la session est enregistrée.' 
+            : 'Signed in successfully! Session is saved.'
+        );
       }
       onUserChanged(user);
       setSyncStatus('success');
@@ -125,10 +156,25 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
         await syncDocumentsToFirestore(user.uid, localDocs);
       }
       setShowEmailForm(false);
+      setPassword('');
     } catch (err: any) {
       console.error('Email auth error:', err);
       setSyncStatus('error');
-      setSyncMessage(err.message || (lang === 'fr' ? 'Erreur d\'identifiants' : 'Authentication error'));
+      const formatted = formatAuthErrorMessage(err, lang === 'fr');
+      setSyncMessage(formatted);
+
+      // Smart suggestions based on error code
+      if (!isSignUp && (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found')) {
+        setAuthSuggestion({
+          type: 'switch_to_register',
+          text: lang === 'fr' ? 'Créer ce compte avec ce mot de passe ?' : 'Create this account with this password?'
+        });
+      } else if (isSignUp && err.code === 'auth/email-already-in-use') {
+        setAuthSuggestion({
+          type: 'switch_to_login',
+          text: lang === 'fr' ? 'Se connecter avec ce compte ?' : 'Sign in with this account?'
+        });
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -358,7 +404,7 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
         {/* Status / Notifications Banner */}
         {syncMessage && (
           <div
-            className={`mx-5 mt-3 p-3 rounded-xl border text-xs flex items-center gap-2 ${
+            className={`mx-5 mt-3 p-3.5 rounded-2xl border text-xs space-y-2.5 ${
               syncStatus === 'success'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
                 : syncStatus === 'error'
@@ -366,14 +412,50 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                 : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300'
             }`}
           >
-            {syncStatus === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            ) : syncStatus === 'error' ? (
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-            ) : (
-              <Cloud className="w-4 h-4 text-indigo-500 shrink-0" />
+            <div className="flex items-start gap-2">
+              {syncStatus === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              ) : syncStatus === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              ) : (
+                <Cloud className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+              )}
+              <span className="flex-1 font-medium leading-relaxed">{syncMessage}</span>
+            </div>
+
+            {/* Direct 1-Click Action Buttons for iFrame / Domain error */}
+            {syncStatus === 'error' && !currentUser && (
+              <div className="pt-2 border-t border-rose-200 dark:border-rose-900/60 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAnonymousLogin}
+                  disabled={isProcessing}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{lang === 'fr' ? '⚡ 1 Clic (Mode Invité)' : '⚡ 1-Click (Guest Mode)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowEmailForm(true)}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 text-slate-800 dark:text-slate-200 font-bold text-[11px] flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Mail className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>{lang === 'fr' ? '✉️ Email / Mot de passe' : '✉️ Email / Password'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.open(window.location.href, '_blank')}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 text-slate-800 dark:text-slate-200 font-bold text-[11px] flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ml-auto active:scale-95"
+                  title={lang === 'fr' ? 'Ouvrir l\'application dans un nouvel onglet plein écran' : 'Open in new browser tab'}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{lang === 'fr' ? '↗️ Nouvel Onglet' : '↗️ New Tab'}</span>
+                </button>
+              </div>
             )}
-            <span className="flex-1">{syncMessage}</span>
           </div>
         )}
 
@@ -492,6 +574,11 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                     <span>
                       {lang === 'fr' ? 'Se connecter avec Google' : 'Sign in with Google'}
                     </span>
+                    {isInIframe && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 rounded-md border border-amber-200 dark:border-amber-800">
+                        {lang === 'fr' ? 'Hors iFrame' : 'Outside iFrame'}
+                      </span>
+                    )}
                   </button>
 
                   {/* Toggle Email/Password form with Real-time Validation */}
@@ -541,22 +628,32 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                         />
                       </div>
 
-                      {/* Password input with length indicator */}
+                      {/* Password input with length indicator and visibility toggle */}
                       <div>
-                        <input
-                          type="password"
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder={lang === 'fr' ? 'Mot de passe (min 6 caractères)' : 'Password (min 6 chars)'}
-                          className={`w-full px-3 py-2 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-white transition-all ${
-                            password.length >= 6
-                              ? 'border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                              : password.length > 0
-                              ? 'border-rose-400 focus:ring-1 focus:ring-rose-400'
-                              : 'border-slate-300 dark:border-slate-700'
-                          }`}
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder={lang === 'fr' ? 'Mot de passe (min 6 caractères)' : 'Password (min 6 chars)'}
+                            className={`w-full pl-3 pr-9 py-2 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-white transition-all ${
+                              password.length >= 6
+                                ? 'border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+                                : password.length > 0
+                                ? 'border-rose-400 focus:ring-1 focus:ring-rose-400'
+                                : 'border-slate-300 dark:border-slate-700'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                            title={showPassword ? (lang === 'fr' ? 'Masquer le mot de passe' : 'Hide password') : (lang === 'fr' ? 'Afficher le mot de passe' : 'Show password')}
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                         {password.length > 0 && password.length < 6 && (
                           <p className="text-[10px] text-rose-500 mt-1">
                             {lang === 'fr' ? 'Le mot de passe doit comporter au moins 6 caractères.' : 'Password must be at least 6 characters.'}
@@ -564,18 +661,59 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                         )}
                       </div>
 
+                      {/* Remember Me / Enregistrer la connexion checkbox */}
+                      <div className="flex items-center justify-between pt-0.5">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+                          />
+                          <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                            {lang === 'fr' ? 'Enregistrer la connexion (Se souvenir de moi)' : 'Save login (Remember me)'}
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Smart Suggestion Switch Banner */}
+                      {authSuggestion && (
+                        <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex items-center justify-between gap-2 animate-in fade-in duration-200">
+                          <span className="text-[11px] font-semibold text-indigo-800 dark:text-indigo-300">
+                            {authSuggestion.text}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsSignUp(authSuggestion.type === 'switch_to_register');
+                              setAuthSuggestion(null);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition-all shadow-xs cursor-pointer shrink-0"
+                          >
+                            {lang === 'fr' ? 'Oui, basculer' : 'Switch now'}
+                          </button>
+                        </div>
+                      )}
+
                       <div className="flex gap-2 pt-1">
                         <button
                           type="submit"
                           disabled={isProcessing || !email.includes('@') || password.length < 6}
-                          className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                          className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                          {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : (isSignUp ? (lang === 'fr' ? 'Créer mon compte' : 'Register') : (lang === 'fr' ? 'Se connecter' : 'Sign In'))}
+                          {isProcessing ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                          ) : (
+                            <>
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>{isSignUp ? (lang === 'fr' ? 'Créer & Enregistrer' : 'Register & Save') : (lang === 'fr' ? 'Se connecter & Mémoriser' : 'Sign In & Remember')}</span>
+                            </>
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setShowEmailForm(false)}
-                          className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                         >
                           {lang === 'fr' ? 'Annuler' : 'Cancel'}
                         </button>
@@ -587,11 +725,11 @@ export const AuthSyncModal: React.FC<AuthSyncModalProps> = ({
                   <button
                     onClick={handleAnonymousLogin}
                     disabled={isProcessing}
-                    className="w-full py-2.5 px-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full py-2.5 px-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 hover:bg-indigo-50 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-98"
                   >
-                    <User className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                     <span>
-                      {lang === 'fr' ? 'Mode invité anonyme (sans identifiants)' : 'Anonymous guest mode'}
+                      {lang === 'fr' ? '⚡ Mode invité rapide (Recommandé en aperçu - 1 clic)' : '⚡ Quick guest mode (Recommended in preview - 1 click)'}
                     </span>
                   </button>
                 </div>

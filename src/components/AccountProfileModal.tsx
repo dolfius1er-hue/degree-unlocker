@@ -25,7 +25,9 @@ import {
   Send,
   Radio,
   Plus,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   auth, 
@@ -36,7 +38,10 @@ import {
   logoutUser, 
   onAuthChange,
   isFirebaseConfigured,
-  isFirebaseOnline
+  isFirebaseOnline,
+  getSavedEmail,
+  formatAuthErrorMessage,
+  getSavedAuthSession
 } from '../lib/firebase';
 import { SchoolDocument } from '../types';
 
@@ -71,11 +76,13 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
   initialTab = 'account',
 }) => {
   const [activeTab, setActiveTab] = useState<'account' | 'friends' | 'privacy'>(initialTab);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => getSavedAuthSession() || (auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser : null));
   const [loading, setLoading] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => getSavedEmail());
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
@@ -215,16 +222,18 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
 
     try {
       if (authMode === 'login') {
-        const user = await loginWithEmail(email, password);
+        const user = await loginWithEmail(email, password, rememberMe);
         if (!user) throw new Error(lang === 'fr' ? 'Échec de connexion' : 'Login failed');
+        setCurrentUser(user);
       } else {
-        const user = await registerWithEmail(email, password);
+        const user = await registerWithEmail(email, password, rememberMe);
         if (!user) throw new Error(lang === 'fr' ? 'Échec de création du compte' : 'Account creation failed');
+        setCurrentUser(user);
       }
-      setEmail('');
       setPassword('');
     } catch (err: any) {
-      setErrorMessage(err.message || (lang === 'fr' ? 'Une erreur est survenue' : 'An error occurred'));
+      const formatted = formatAuthErrorMessage(err, lang === 'fr');
+      setErrorMessage(formatted);
     } finally {
       setLoading(false);
     }
@@ -589,14 +598,37 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                       <input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                        title={showPassword ? (lang === 'fr' ? 'Masquer le mot de passe' : 'Hide password') : (lang === 'fr' ? 'Afficher le mot de passe' : 'Show password')}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
+                  </div>
+
+                  {/* Enregistrer la connexion */}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+                      />
+                      <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                        {lang === 'fr' ? 'Enregistrer la connexion (Mémoriser mes identifiants)' : 'Save login (Remember my credentials)'}
+                      </span>
+                    </label>
                   </div>
 
                   <button

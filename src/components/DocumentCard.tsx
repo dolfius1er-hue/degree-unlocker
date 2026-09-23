@@ -3,6 +3,7 @@ import { SchoolDocument, AppLanguage, CustomTag } from '../types';
 import { getSubjectBadgeClass, formatFileSize } from '../utils/colors';
 import { TAG_COLORS } from './TagManagerModal';
 import { TagAssignPopover } from './TagAssignPopover';
+import { HighlightText } from './HighlightText';
 import { 
   FileText, 
   FileCheck, 
@@ -45,6 +46,7 @@ interface DocumentCardProps {
   onCreateTag?: (newTag: CustomTag) => void;
   onFilterByTag?: (tag: string) => void;
   onSendToPhone?: (doc: SchoolDocument) => void;
+  searchQuery?: string;
 }
 
 export const DocumentCard: React.FC<DocumentCardProps> = ({
@@ -65,6 +67,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onCreateTag,
   onFilterByTag,
   onSendToPhone,
+  searchQuery = '',
 }) => {
   const [isAssignPopoverOpen, setIsAssignPopoverOpen] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
@@ -138,7 +141,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${badge.bg} ${badge.text} ${badge.border}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
-              {document.subject || (lang === 'fr' ? 'Général' : 'General')}
+              <HighlightText text={document.subject || (lang === 'fr' ? 'Général' : 'General')} query={searchQuery} />
             </span>
 
             {isPdf ? (
@@ -225,7 +228,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
           onClick={() => onEdit(document)}
           className="text-base font-bold text-slate-900 leading-snug hover:text-indigo-700 cursor-pointer transition-colors line-clamp-2"
         >
-          {document.title}
+          <HighlightText text={document.title} query={searchQuery} />
         </h3>
 
         {/* Content Preview / Summary */}

@@ -1,0 +1,11 @@
+{
+  "theme": "light",
+  "menuPosition": "left",
+  "isSidebarCollapsed": false,
+  "language": "fr",
+  "fontSize": "normal",
+  "aiProvider": "auto",
+  "ollamaBaseUrl": "http://127.0.0.1:11434",
+  "ollamaModel": "llama3",
+  "updatedAt": "2026-09-21T19:27:08.495Z"
+}

@@ -347,25 +347,7 @@ export const openNativeFileDialog = async (
   options?: NativeFileDialogOptions
 ): Promise<string | string[] | null> => {
   if (!isTauri()) {
-    // Graceful web fallback using hidden input element
-    return new Promise((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.multiple = options?.multiple ?? false;
-      const exts = options?.filters?.flatMap(f => f.extensions).filter(e => e !== '*') || [];
-      if (exts.length > 0) {
-        input.accept = exts.map(e => `.${e}`).join(',');
-      }
-      input.onchange = () => {
-        if (input.files && input.files.length > 0) {
-          const names = Array.from(input.files).map(f => f.name);
-          resolve(options?.multiple ? names : names[0]);
-        } else {
-          resolve(null);
-        }
-      };
-      input.click();
-    });
+    return null;
   }
 
   try {

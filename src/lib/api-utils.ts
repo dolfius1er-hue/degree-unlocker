@@ -14,10 +14,23 @@ export async function fetchWithRetry(
   options: FetchWithRetryOptions = {},
   ..._rest: any[]
 ): Promise<Response> {
+  const isAiOrHeavy = 
+    url.includes('summarize') || 
+    url.includes('parse') || 
+    url.includes('generate') || 
+    url.includes('coach') || 
+    url.includes('search') || 
+    url.includes('scan') || 
+    url.includes('bilingual') || 
+    url.includes('tts') ||
+    url.includes('sync');
+
+  const defaultTimeout = isAiOrHeavy ? 45000 : 15000;
+
   const {
     retries = 2,
-    initialDelayMs = 300,
-    timeoutMs = 4000,
+    initialDelayMs = 400,
+    timeoutMs = defaultTimeout,
     onRetry,
     signal: userSignal,
     ...fetchOptions
@@ -80,11 +93,13 @@ export async function fetchWithRetry(
 export async function fetchJsonWithRetry<T = any>(
   url: string,
   options: FetchWithRetryOptions = {},
-  ...rest: any[]
+  retryOverrides?: FetchWithRetryOptions
 ): Promise<T> {
-  const res = await fetchWithRetry(url, options, ...rest);
+  const mergedOptions = retryOverrides ? { ...options, ...retryOverrides } : options;
+  const res = await fetchWithRetry(url, mergedOptions);
   if (!res.ok) {
-    throw new Error(`HTTP error! status: ${res.status}`);
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || `HTTP error! status: ${res.status}`);
   }
   return res.json();
 }
